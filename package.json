@@ -12,6 +12,7 @@
     "load-grunt-tasks": "~0.4.0",
     "grunt-preprocess": "~4.0.0",
     "grunt-contrib-jasmine": "~0.6.4",
-    "grunt-lintspaces": "~0.5.1"
+    "grunt-lintspaces": "~0.5.1",
+    "grunt-replace": "~0.7.7"
   }
 }

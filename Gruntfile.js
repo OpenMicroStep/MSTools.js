@@ -32,6 +32,28 @@ module.exports = function(grunt) {
             }
         },
 
+        replace: {
+            dist: {
+                options: {
+                    patterns: [
+                        {
+                            match: /\t/g,               // Tabs to spaces
+                            replacement: '    '
+                        }, {
+                            match: /[ \t\s]+$/g,        // Trailing spaces  TODO: or tabs
+                            replacement: ''
+                        }
+                    ]
+                },
+                files: [
+                    {
+                        src: 'src/**/*.js',
+                        dest: './'
+                    }
+                ]
+            }
+        },
+
         concat: {
             options: {
                 banner: "<%= banner %>"
@@ -94,7 +116,7 @@ module.exports = function(grunt) {
     });
 
     grunt.registerTask('default', 'An alias task for quick build.', ['quickbuild']);
-    grunt.registerTask('lint', 'Lints our sources', ['lintspaces', 'jshint']);
+    grunt.registerTask('lint', 'Lints our sources', ['replace', 'lintspaces', 'jshint']);
     grunt.registerTask('test', 'Run the unit tests.', ['lint', 'preprocess:dist', 'jasmine:MSTools', 'clean:tmp']);
    /* grunt.registerTask('dev', 'Auto-test while developing.', ['watch:MSTools']); */
     grunt.registerTask('build', 'Build our library.', ['clean', 'lint', 'preprocess:dist', 'jasmine:MSTools', 'concat', 'uglify', 'clean:tmp']);
