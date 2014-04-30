@@ -1,0 +1,14 @@
+# Operating System Trash
+.DS_Store
+Thumbs.db
+
+# Code Editors' files and folders
+.idea
+*.sublime-project
+*.sublime-workspace
+_SpecRunner.html
+
+# Folders to ignore
+node_modules
+bower_components
+.grunt

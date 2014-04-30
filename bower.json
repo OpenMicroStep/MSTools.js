@@ -1,0 +1,15 @@
+{
+  "name": "MSTools",
+  "version": "0.0.1",
+  "main": "./dist/MSTools.js",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "test",
+    "*.md",
+    "test",
+    "benchmark",
+    "Gruntfile.js",
+    "package.json"
+  ]
+}
