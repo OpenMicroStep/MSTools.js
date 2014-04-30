@@ -19,11 +19,11 @@ module.exports = function(grunt) {
         preprocess: {
             dist: {
                 src: 'src/core.js',
-                dest: 'tmp/MSTools.js'
+                dest: 'tmp/<%= pkg.name %>.js'
             },
             debug: {
                 src: 'src/core.js',
-                dest: 'tmp/MSTools.js',
+                dest: '<%= preprocess.dist.dest %>',
                 options: {
                     context: {
                         DEBUG: true
@@ -40,7 +40,7 @@ module.exports = function(grunt) {
                             match: /\t/g,               // Tabs to spaces
                             replacement: '    '
                         }, {
-                            match: /[ \t\s]+$/g,        // Trailing spaces  TODO: or tabs
+                            match: /[ \t]+\n/g,        // Trailing spaces  TODO: or tabs
                             replacement: ''
                         }
                     ]
@@ -82,7 +82,7 @@ module.exports = function(grunt) {
                 vendor : [],
                 keepRunner: true
             },
-            MSTools : {
+            dist : {
                 src : [
                     '<%= preprocess.dist.dest %>'
                 ]
@@ -93,11 +93,11 @@ module.exports = function(grunt) {
             options: {
                 jshintrc : '.jshintrc'
             },
-            MSTools : [ 'src/**/*.js' ]
+            dist : [ 'src/**/*.js' ]
         },
 
         watch: {
-            MSTools : {
+            dist : {
                 files : ['src/**/*.js', 'spec/**/*.js'],
                 tasks : ['test']
             }
@@ -116,9 +116,9 @@ module.exports = function(grunt) {
     });
 
     grunt.registerTask('default', 'An alias task for quick build.', ['quickbuild']);
-    grunt.registerTask('lint', 'Lints our sources', ['replace', 'lintspaces', 'jshint']);
-    grunt.registerTask('test', 'Run the unit tests.', ['lint', 'preprocess:dist', 'jasmine:MSTools', 'clean:tmp']);
-   /* grunt.registerTask('dev', 'Auto-test while developing.', ['watch:MSTools']); */
-    grunt.registerTask('build', 'Build our library.', ['clean', 'lint', 'preprocess:dist', 'jasmine:MSTools', 'concat', 'uglify', 'clean:tmp']);
-    grunt.registerTask('quickbuild', 'Build our library without time consuming jasmine tests and minifying.', ['lint', 'clean', 'preprocess:debug', 'concat', 'clean:tmp']);
+    grunt.registerTask('lint', 'Lints our sources', ['lintspaces', 'jshint']);
+    grunt.registerTask('test', 'Run the unit tests.', ['lint', 'preprocess:dist', 'jasmine:dist', 'clean:tmp']);
+   /* grunt.registerTask('dev', 'Auto-test while developing.', ['watch:dist']); */
+    grunt.registerTask('build', 'Build our library.', ['replace', 'lint', 'clean', 'preprocess:dist', 'jasmine:dist', 'concat', 'uglify', 'clean:tmp']);
+    grunt.registerTask('quickbuild', 'Build our library without time consuming jasmine tests and minifying.', ['replace', 'lint', 'clean', 'preprocess:debug', 'concat', 'clean:tmp']);
 };
