@@ -38,17 +38,17 @@ module.exports = function(grunt) {
             },
             dist: {
                 src: '<%= preprocess.dist.dest %>',
-                dest: 'dist/MSTools.js'
+                dest: 'dist/<%= pkg.name %>-<%= pkg.version %>.js'
             }
         },
 
         uglify : {
             dist: {
                 src : '<%= concat.dist.dest %>',
-                dest : 'dist/MSTools.min.js',
+                dest : 'dist/<%= pkg.name %>-<%= pkg.version %>.min.js',
                 options : {
                     banner: "<%= banner %>",
-                    sourceMap : 'dist/MSTools.map'
+                    sourceMap : 'dist/<%= pkg.name %>-<%= pkg.version %>.map'
                 }
             }
         },
@@ -98,5 +98,5 @@ module.exports = function(grunt) {
     grunt.registerTask('test', 'Run the unit tests.', ['lint', 'preprocess:dist', 'jasmine:MSTools', 'clean:tmp']);
    /* grunt.registerTask('dev', 'Auto-test while developing.', ['watch:MSTools']); */
     grunt.registerTask('build', 'Build our library.', ['clean', 'lint', 'preprocess:dist', 'jasmine:MSTools', 'concat', 'uglify', 'clean:tmp']);
-    grunt.registerTask('quickbuild', 'Build our library without time consuming tests and minifying.', ['clean', 'preprocess:debug', 'concat', 'clean:tmp']);
+    grunt.registerTask('quickbuild', 'Build our library without time consuming jasmine tests and minifying.', ['lint', 'clean', 'preprocess:debug', 'concat', 'clean:tmp']);
 };
