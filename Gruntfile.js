@@ -40,7 +40,7 @@ module.exports = function(grunt) {
                             match: /\t/g,               // Tabs to spaces
                             replacement: '    '
                         }, {
-                            match: /[ \t]+\n/g,        // Trailing spaces  TODO: or tabs
+                            match: /[ \t]+\n/g,         // Trailing spaces
                             replacement: ''
                         }
                     ]
@@ -111,6 +111,22 @@ module.exports = function(grunt) {
                 options: {
                     editorconfig: '.editorconfig'
                 }
+            }
+        },
+
+        bump: {
+            options: {
+                files: ['package.json', 'bower.json'],
+                updateConfigs: [],
+                commit: true,
+                commitMessage: 'Release v%VERSION%',
+                commitFiles: ['package.json', 'bower.json'], // '-a' for all files
+                createTag: true,
+                tagName: 'v%VERSION%',
+                tagMessage: 'Version %VERSION%',
+                push: false,
+                pushTo: 'origin',
+                gitDescribeOptions: '--tags --always --abbrev=1 --dirty=-d' // options to use with '$ git describe'
             }
         }
     });
