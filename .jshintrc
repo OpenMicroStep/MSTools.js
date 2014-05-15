@@ -12,6 +12,9 @@
     "browser": true,
     "globals": {
         "MSTools": true,
-        "console": true
+        "console": true,
+		"$ok": true,
+		"$length" : true,
+		"$div" : true
     }
 }

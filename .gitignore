@@ -9,6 +9,7 @@ Thumbs.db
 _SpecRunner.html
 
 # Folders to ignore
+tmp
 node_modules
 bower_components
 .grunt

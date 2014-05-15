@@ -1,55 +1,27 @@
 /*
-	This file is a direct copy with some modifications of a part of the file 
-	json2.js form M. Crockford. Thanks to him to release that as public domain.
-	
-	Obviously we keep it public domain here
+    This file is a direct copy with some modifications of a part of the file    json2.js form M. Crockford. Thanks to him to release that as public domain.
+    Obviously we keep it public domain here
 */
 
 (function () {
     'use strict';
 
-    function f(n) {
-        // Format integers to have at least two digits.
-        return n < 10 ? '0' + n : n;
-    }
 
-    if (typeof Date.prototype.toJSON !== 'function') {
-
-        Date.prototype.toJSON = function (key) {
-
-            return (isFinite(this.valueOf()) ?
-                this.getUTCFullYear()     + '-' +
-                    f(this.getUTCMonth() + 1) + '-' +
-                    f(this.getUTCDate())      + 'T' +
-                    f(this.getUTCHours())     + ':' +
-                    f(this.getUTCMinutes())   + ':' +
-                    f(this.getUTCSeconds())   + 'Z'
-                : null);
-        };
-
-        String.prototype.toJSON      =
-            Number.prototype.toJSON  =
-            Boolean.prototype.toJSON = function (key) {
-                return this.valueOf();
-            };
-    }
-
-	// escapable was modified from initial json2.js in order to escape all control characters and all characters with diacritics signs
+    // escapable was modified from initial json2.js in order to escape all control characters and all characters with diacritics signs
     var escapable = /[\\\"\x00-\x1f\u007f-\uffff]/g,
         gap,
         indent,
         meta = {    // table of character substitutions
-            '\b': '\\b',
-            '\t': '\\t',
-            '\n': '\\n',
-            '\f': '\\f',
-            '\r': '\\r',
+            '\b' : '\\b',
+            '\t' : '\\t',
+            '\n' : '\\n',
+            '\f' : '\\f',
+            '\r' : '\\r',
             '\"' : '\\"',
             '\/' : '\\/',
-            '\\': '\\\\'
+            '\\' : '\\\\'
         },
         rep;
-
 
     function quote(str) {
 
@@ -132,12 +104,13 @@
 
 // Is the value an array?
 
-            if (Object.prototype.toString.apply(value) === '[object Array]') {
+            if (value.isArray || Object.prototype.toString.apply(value) === '[object Array]') {
 
 // The value is an array. Stringify every element. Use null as a placeholder
 // for non-JSON values.
 
                 length = value.length;
+console.log("Important LOG: JSON: " + length);
                 for (i = 0; i < length; i += 1) {
                     partial[i] = str(i, value) || 'null';
                 }
@@ -145,11 +118,8 @@
 // Join all of the elements together, separated with commas, and wrap them in
 // brackets.
 
-                v = partial.length === 0
-                    ? '[]'
-                    : gap
-                    ? '[\n' + gap + partial.join(',\n' + gap) + '\n' + mind + ']'
-                    : '[' + partial.join(',') + ']';
+                v = partial.length === 0 ? '[]'
+                    : (gap ? '[\n' + gap + partial.join(',\n' + gap) + '\n' + mind + ']' : '[' + partial.join(',') + ']');
                 gap = mind;
                 return v;
             }
@@ -184,11 +154,8 @@
 // Join all of the member texts together, separated with commas,
 // and wrap them in braces.
 
-            v = partial.length === 0
-                ? '{}'
-                : gap
-                ? '{\n' + gap + partial.join(',\n' + gap) + '\n' + mind + '}'
-                : '{' + partial.join(',') + '}';
+            v = partial.length === 0 ? '{}'
+                : (gap ? '{\n' + gap + partial.join(',\n' + gap) + '\n' + mind + '}' : '{' + partial.join(',') + '}') ;
             gap = mind;
             return v;
         }
