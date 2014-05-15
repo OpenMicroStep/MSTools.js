@@ -64,13 +64,12 @@ module.exports = function(grunt) {
             }
         },
 
-        uglify : {
+        min : {
             dist: {
                 src : '<%= concat.dist.dest %>',
                 dest : 'dist/<%= pkg.name %>-<%= pkg.version %>.min.js',
                 options : {
-                    banner: "<%= banner %>",
-                    sourceMap : 'dist/<%= pkg.name %>-<%= pkg.version %>.map'
+                    banner: "<%= banner %>"
                 }
             }
         },
@@ -135,6 +134,6 @@ module.exports = function(grunt) {
     grunt.registerTask('lint', 'Lints our sources', ['lintspaces', 'jshint']);
     grunt.registerTask('test', 'Run the unit tests.', ['lint', 'preprocess:dist', 'jasmine:dist', 'clean:tmp']);
    /* grunt.registerTask('dev', 'Auto-test while developing.', ['watch:dist']); */
-    grunt.registerTask('build', 'Build our library.', ['replace', 'lint', 'clean', 'preprocess:dist', 'jasmine:dist', 'concat', 'uglify', 'clean:tmp']);
+    grunt.registerTask('build', 'Build our library.', ['replace', 'lint', 'clean', 'preprocess:dist', 'jasmine:dist', 'concat', 'min', 'clean:tmp']);
     grunt.registerTask('quickbuild', 'Build our library without time consuming jasmine tests and minifying.', ['replace', 'lint', 'clean', 'preprocess:debug', 'concat', 'clean:tmp']);
 };

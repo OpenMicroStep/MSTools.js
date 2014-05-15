@@ -110,7 +110,7 @@
 // for non-JSON values.
 
                 length = value.length;
-console.log("Important LOG: JSON: " + length);
+//console.log("THE RECURSIVE FUNCTION str KEEPS CALLING ITSELF HERE");
                 for (i = 0; i < length; i += 1) {
                     partial[i] = str(i, value) || 'null';
                 }

@@ -102,7 +102,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
 
         this.engine = MSTools.MSTE.ENGINES[v] ;
 
-        console.log('version = MSTE'+this.engine.version.toHexa(4)) ;
+        //console.log('version = MSTE'+this.engine.version.toHexa(4)) ;
 
         this.crc = a[2] ;
         // TODO: check the CRC
@@ -163,12 +163,12 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
         while (i < n) {
             futureState = null ;
             hasValue = false ;
-            console.log('---- MSTE automat state : '+state+' stack depth : '+stack.length+'--------------------------') ;
-            console.log('     index = '+i+', token ['+a[i]+']') ;
+            //console.log('---- MSTE automat state : '+state+' stack depth : '+stack.length+'--------------------------') ;
+            //console.log('     index = '+i+', token ['+a[i]+']') ;
             switch(state) {
                 case -1: // token code reading
                     if ($ok(currentState.nextState)) {
-                        console.log('changing state from -1 to '+currentState.nextState) ;
+                        //console.log('changing state from -1 to '+currentState.nextState) ;
                         state = currentState.nextState ;
                         currentState.nextState = null ;
                         continue ;
@@ -182,13 +182,13 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                         futureClass = this.classes[engine.getClassIndex(code)] ;
                         futureConstructor = null ;
                         if (futureClass && this.correspondances) { futureConstructor = this.correspondances[futureClass] ; }
-                        console.log('Found a class named <'+futureClass+'>') ;
+                        //console.log('Found a class named <'+futureClass+'>') ;
                         state = 100 ;
                         // TODO using future constructor and future class
                         // with this linearized version it's highly complicated to change already referenced objects...
                     }
                     else {
-                        console.log('     did read code '+code+' ('+engine.codeNames[code]+')') ;
+                        //console.log('     did read code '+code+' ('+engine.codeNames[code]+')') ;
                         state = engine.states[code] ;
                         if (state >= 0 && state < clen) {
                             value = constants[state] ;
@@ -214,7 +214,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                     break ;
                 case 101: // read dictionary key
                     currentState.k = this.keys[a[i++]] ; // the key is a string
-                    console.log('     did read key \"'+currentState.k+'\"') ;
+                    //console.log('     did read key \"'+currentState.k+'\"') ;
                     state = -1 ;
                     break ;
                 case 102: // array reading initialization
@@ -238,7 +238,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                     currentState.i++ ;
                     if (currentState.i === currentState.n) {
                         stack.pop() ;
-                        console.log('      <<<< did pop stack') ;
+                        //console.log('      <<<< did pop stack') ;
                         currentState = stack.length ? stack[stack.length - 1] : null ;
                         state = -1 ;
                     }
@@ -285,28 +285,32 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                     state = -1 ;
                     break ;
                 default:
-                    console.log("Bad state encoutered during parsing") ;
+                    //console.log("Bad state encoutered during parsing") ;
                     throw 'Bad state encoutered during parsing' ;
             }
             if (hasValue) {
 
                 switch(currentState.s) {
                     case 0:
-                        console.log('     dict[\''+currentState.k+'\'] = '+MSTools.stringify(value)) ;
+                        ////console.log('     dict[\''+currentState.k+'\'] = '+MSTools.stringify(value)) ;
+                        //console.log('     dict[\''+currentState.k+'\'] = ' + value);
                         currentState.o[currentState.k] = value ;
                         currentState.nextState = 101 ;
                         break ;
                     case 1:
-                        console.log('     array['+currentState.i+'] = '+MSTools.stringify(value)) ;
+                        ////console.log('     array['+currentState.i+'] = '+MSTools.stringify(value)) ;
+                        //console.log('     array['+currentState.i+'] = ' + value) ;
                         currentState.o[currentState.i] = value ;
                         break ;
                     case 2:
-                        console.log('     couple.firstMember = '+MSTools.stringify(value)) ;
+                        ////console.log('     couple.firstMember = '+MSTools.stringify(value)) ;
+                        //console.log('     couple.firstMember = ' + value) ;
                         currentState.o.firstMember = value ;
                         currentState.s = 3 ;
                         break ;
                     case 3:
-                        console.log('     couple.secondMember = '+MSTools.stringify(value)) ;
+                        ////console.log('     couple.secondMember = '+MSTools.stringify(value)) ;
+                        //console.log('     couple.secondMember = ' + value) ;
                         currentState.o.secondMember = value ;
                         break ;
                     default:
@@ -316,20 +320,20 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                 if (currentState.i === currentState.n) {
                     stack.pop() ;
                     currentState = stack.length ? stack[stack.length - 1] : null ;
-                    console.log('      <<<< did pop stack') ;
+                    //console.log('      <<<< did pop stack') ;
                     if (currentState) {
-                        console.log('      new current state.s = '+currentState.s+', i = '+currentState.i+', n = '+currentState.n+', => '+currentState.nextState) ;
+                        //console.log('      new current state.s = '+currentState.s+', i = '+currentState.i+', n = '+currentState.n+', => '+currentState.nextState) ;
                     }
                     else {
-                        console.log('      : stack is empty') ;
+                        //console.log('      : stack is empty') ;
                     }
                 }
             }
             if (futureState) {
                 stack.push(futureState) ;
-                console.log('      >>>> did push stack') ;
+                //console.log('      >>>> did push stack') ;
                 currentState = futureState ;
-                console.log('      new current state.s = '+currentState.s+', i = '+currentState.i+', n = '+currentState.n+', => '+currentState.nextState) ;
+                //console.log('      new current state.s = '+currentState.s+', i = '+currentState.i+', n = '+currentState.n+', => '+currentState.nextState) ;
             }
         }
         if (stack.length > 0) { throw "Bad final stack with current state "+stack.lastObject().s ; }
@@ -392,7 +396,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Encoder,
     encodeObject:function(o) {
         if ($ok(o)) {
             if (typeof o.toMSTE === 'function') {
-                // console.log('will encode object of class '+o.isa+' with its internal function') ;
+                // //console.log('will encode object of class '+o.isa+' with its internal function') ;
                 o.toMSTE(this) ;
             }
             else if (this.shouldPushObject(o)) {
@@ -421,7 +425,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Encoder,
                 }
                 else {
                     // object standard loop
-                    // console.log('will encode object '+MSTools.stringify(o)) ;
+                    // //console.log('will encode object '+MSTools.stringify(o)) ;
                     for (k in o) {
                         if (k.length && k.charAt(0) >= 'A') {
                             v = o[k] ; t = typeof v ;
@@ -473,7 +477,9 @@ MSTools.MSTE.parse = function(source, options) {
         try {
             r = decoder.parse(source) ;
         }
-        catch (e) { console.log("error "+e+" during MSTE parsing") ; r = null ; }
+        catch (e) {
+        //console.log("error "+e+" during MSTE parsing") ; r = null ;
+        }
     }
     return r ;
 } ;
@@ -486,7 +492,7 @@ MSTools.MSTE.tokenize = function(rootObject) {
     }
     catch (e) {
         encoder.deleteTemporaryIdentifiers() ;
-        console.log("error \""+e+"\" encountered during MSTE tokenizing") ;
+        //console.log("error \""+e+"\" encountered during MSTE tokenizing") ;
         r = null ;
     }
 
@@ -501,7 +507,7 @@ MSTools.MSTE.stringify = function(rootObject) {
             // TODO: calculate the CRC after the stringify has been done
         }
         catch (e) {
-            console.log("error "+e+" during MSTE stringify") ;
+            //console.log("error "+e+" during MSTE stringify") ;
             r = null ;
         }
     }
