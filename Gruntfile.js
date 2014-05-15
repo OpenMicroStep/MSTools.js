@@ -41,7 +41,7 @@ module.exports = function(grunt) {
                             replacement: '    '
                         }, {
                             match: /[ \t]+\n/g,         // Trailing spaces
-                            replacement: ''
+                            replacement: '\n'
                         }
                     ]
                 },
