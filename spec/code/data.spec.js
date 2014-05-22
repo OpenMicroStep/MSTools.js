@@ -1,22 +1,42 @@
 describe("==========Tests of data  ========", function() {
-	it("Testing constructor", function() {
+	it("Testing constructor, concat, slice", function() {
 				
-		var n = new MSData() ;
+		var n = new MSData(), n1, n2 ;
         expect(n.length).toBe(0);
 
-		/* n = new MSData(4799) ;
-        expect(n.length).toBe(0); THIS TEST SHOULD BE WRONG */
-
-		n = new MSData(1, 8, 3, 7) ;
+		n = new MSData(100, 80, 30, 77) ;
         expect(n.length).toBe(4);
-        expect(MSTools.stringify(n)).toBe("[1,8,3,7]");
+        expect(MSTools.stringify(n)).toBe("[100,80,30,77]");
 
-		n = new MSData('AM NBCP') ;
-        expect(n.length).toBe(7);
-		expect(MSTools.stringify(n)).toBe("[65,77,32,78,66,67,80]");
+		n1 = new MSData('AM NBCP') ;
+        expect(n1.length).toBe(7);
+		expect(MSTools.stringify(n1)).toBe("[65,77,32,78,66,67,80]");
+		
+		n2 = new MSData(80,90,100,110,112,113,114,115) ;
+		
+		var r = n1.concat(n, n2) ;
         
+		expect(MSTools.stringify(r)).toBe("[65,77,32,78,66,67,80,100,80,30,77,80,90,100,110,112,113,114,115]");
+		
+		expect(MSTools.stringify(r.slice())).toBe(MSTools.stringify(r)) ;
+		expect(MSTools.stringify(r.slice(null,7))).toBe(MSTools.stringify(n1)) ;
+		expect(MSTools.stringify(r.slice(7,11))).toBe(MSTools.stringify(n)) ;
+		expect(MSTools.stringify(r.slice(11))).toBe(MSTools.stringify(n2)) ;
     });
 
+	/*it("Testing splice", function() {
+	}) ;*/
+
+	it("Testing base64 decode/encode on short string", function() {
+		var s = "Rjd5NA==" ;
+		var d = MSData.initWithBase64String(s) ;
+
+		expect(d.toString()).toBe("F7y4") ;
+
+		var r = d.toBase64String() ;
+		expect(r).toBe(s) ;
+	}) ;
+	
 	it("Testing base64 encoding", function() {
 		var d =  new MSData("Client browser handles the data from the source form as a string data encoded by document charset (iso-8859-1 in the case of this document) and sends the data as a binary http stream to a web server. You can choose another character set for the conversion of the source text data (the textarea). This script does Base64 conversion with the converted binary data") ;
 		var s = d.toBase64String() ;

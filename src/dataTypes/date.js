@@ -1,6 +1,10 @@
 
 // ================ constants ====================
 MSTools.defineHiddenConstant(Date.prototype,'isa', 'Date', true) ;
+MSTools.defineHiddenConstants(Date,{
+    DISTANT_PAST_TS:-8640000000000000,
+    DISTANT_FUTURE_TS:8640000000000000
+}, true) ;
 MSTools.defineConstants(Date,{
     DISTANT_PAST:new Date(-8640000000000000),
     DISTANT_FUTURE:new Date(8640000000000000),
@@ -11,14 +15,15 @@ MSTools.defineConstants(Date,{
 MSTools.defineMethods(Date, {
     currentMonth:function() { return new Date().getMonth() ; },
     currentYear:function() { return new Date().getFullYear() ; },
-    initWithUTCSeconds:function(utc) {
+    initWithUTCTime:function(utc) {
         var d, t ;
-        utc = 0+utc*1000 ;
+        utc = 0+utc ;
         d = new Date(utc) ;
         t = d.getTimezoneOffset() ;
         if (t !== 0) { d.setTime(utc+t*60000) ; }
         return d ;
     },
+    initWithUTCSeconds:function(utc) { return this.initWithUTCTime(1000*utc) ; },
     initWithInt:function(decimalDate) {
         if ($ok(decimalDate)) {
             decimalDate = decimalDate.toInt() ;
@@ -41,8 +46,9 @@ MSTools.defineMethods(Date, {
 
 
 MSTools.defineInstanceMethods(Date, {
-    dateWithoutTime: function() { var utc = this.getUTCSeconds() ; return Date.initWithUTCSeconds(utc - (utc % 86400)) ; },
-    getUTCSeconds: function() { return $div(this.getTime()) - this.getTimezoneOffset()*60 ; },
+    getUTCFullSeconds: function() { return $div(this.getTime(), 1000) - this.getTimezoneOffset()*60 ; },
+    getUTCFullTime: function() { return this.getTime() - this.getTimezoneOffset()*60000 ; },
+    dateWithoutTime: function() { var utc = this.getUTCFullTime() ; return Date.initWithUTCTime(utc - (utc % 86400000)) ; },
     isLeap: function() { return Date.isLeapYear(this.getFullYear()) ; },
     shiftSeconds: function(s) { this.setTime(this.getTime()+s*1000) ; },
     weekOfYear: function(offset) {
@@ -68,6 +74,14 @@ MSTools.defineInstanceMethods(Date, {
         else { week++ ; }
         return week ;
     },
+    isEqualTo: function(other, options) {
+
+        if (this === other) { return true ; }
+        if (options && options.secondPrecision) {
+            return $ok(other) && this.isa === other.isa && this.getUTCFullSeconds() === other.getUTCFullSeconds() ? true : false ;
+        }
+        return $ok(other) && this.isa === other.isa && this.getUTCFullTime() === other.getUTCFullTime() ? true : false ;
+    },
     toInt: function() { return this.getFullYear() * 10000 + (this.getMonth()+1) * 100 + this.getDate() ; },
     toUInt: function() { return this.getFullYear() * 10000 + (this.getMonth()+1) * 100 + this.getDate() ; },
     toJSON: function (key) {
@@ -85,9 +99,10 @@ MSTools.defineInstanceMethods(Date, {
 
 MSTools.defineInstanceMethods(Date, {
     toMSTE: function(encoder) {
-        var t = this.getUTCSeconds() ;
-        if (t >= Date.DISTANT_FUTURE) { encoder.push(5) ; }
-        else if ( t <= Date.DISTANT_PAST) { encoder.push(4) ; }
+        var t = this.getUTCFullTime() ;
+        //console.log("UTC milliseconds of date "+this+" is "+t) ;
+        if (t >= Date.DISTANT_FUTURE_TS) { encoder.push(5) ; }
+        else if ( t <= Date.DISTANT_PAST_TS) { encoder.push(4) ; }
         else {
             var identifier = this[encoder.referenceKey] ;
             if ($ok(identifier)) { encoder.push(9) ; encoder.push(identifier) ; }
@@ -101,7 +116,7 @@ MSTools.defineInstanceMethods(Date, {
                 }) ;
                 encoder.encodedObjects[identifier] = this ;
                 encoder.push(22) ;
-                encoder.push(t) ;
+                encoder.push($div(t,1000)) ;
             }
         }
     }

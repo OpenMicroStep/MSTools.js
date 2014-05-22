@@ -49,13 +49,20 @@ MSTools.defineInstanceMethods(Array, {
     },
     contains:function(item) { return this.indexOf(item) === -1 ? false : true ; },
     containsIdentical:function(item) { return this.indexOfIdentical(item) === -1 ? false : true ; },
+    isEqualTo: function(other, options) {
+        var i, count ;
+        if (this === other) { return true ; }
+        if (!$ok(other) || this.isa !== other.isa || (count = this.length) !== other.length) { return false ; }
+        for (i = 0 ; i < count ; i++) { if (!$equals(this[i], other[i], options)) { return false ; } }
+        return true ;
+    },
     sortedIndexOf:function(item) {
         // this works only if your array is sorted
         if (this.length === 0) { return 0 ; }
         return _sortedIndexOf(this, item, 0, this.length) ;
     },
     addSorted:function(item) {
-        // this works only if your array is sorted
+        // this works only if your array is already sorted
         var i = this.length ;
         if (i === 0 || item > this[i - 1]) {
             this.push(item) ;

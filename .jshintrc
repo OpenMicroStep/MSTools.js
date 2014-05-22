@@ -15,6 +15,7 @@
         "console": true,
 		"$ok": true,
 		"$length" : true,
-		"$div" : true
+		"$div" : true,
+		"$equals" : true
     }
 }

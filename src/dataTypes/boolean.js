@@ -8,6 +8,10 @@ MSTools.defineHiddenConstant(Boolean.prototype,'isa', 'Boolean', true) ;
 MSTools.defineInstanceMethods(Boolean, {
     toInt: function() { return this ? 1 : 0 ; },
     toUInt: function() { return this ? 1 : 0 ; },
+    isEqualTo: function(other, options) {
+        if (this === other) { return true ; }
+        return $ok(other) && this.isa === other.isa && ((other && this) || (!(other) && !(this))) ? true : false ;
+    },
     toJSON: function(key) { return this.valueOf(); }
 }) ;
 

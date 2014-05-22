@@ -130,6 +130,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
         (we want to preserve the javascript stack)
 
         states        description
+        -2              code reading after a dictionary key was read
         -1            code reading
 
         0..6        Constants
@@ -152,7 +153,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
 */
     decodeStream:function() {
         var a = this.tokens, i = this.index, n = this.count, count, index ;
-        var code, state = -1, futureClass = null, futureConstructor = null ;
+        var code, state = -1, futureClass = null, FutureConstructor = null ;
         var k, constants = MSTools.MSTE.CONSTANTS, clen = constants.length ;
         var stack = [], value, currentState = this, futureState = null, hasValue = false ;
         var engine =  this.engine ;
@@ -160,12 +161,15 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
         currentState = {s:0, i:0, n:1, k:'root', o:this} ;
         stack.push(currentState) ;
 
+        function dst(v) { return $ok(v) ? ($length(v.isa) ? v.isa : typeof v) : (typeof v === 'undefined' ? 'undefined' : 'NULL') ; }
+
         while (i < n) {
             futureState = null ;
             hasValue = false ;
             //console.log('---- MSTE automat state : '+state+' stack depth : '+stack.length+'--------------------------') ;
             //console.log('     index = '+i+', token ['+a[i]+']') ;
             switch(state) {
+                case -2: // token code reading after a dictionary key was read
                 case -1: // token code reading
                     if ($ok(currentState.nextState)) {
                         //console.log('changing state from -1 to '+currentState.nextState) ;
@@ -180,8 +184,10 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                     }
                     else if (code >= engine.classCode) {
                         futureClass = this.classes[engine.getClassIndex(code)] ;
-                        futureConstructor = null ;
-                        if (futureClass && this.correspondances) { futureConstructor = this.correspondances[futureClass] ; }
+                        FutureConstructor = null ;
+                        if (futureClass) {
+                            if (this.correspondances) { FutureConstructor = this.correspondances[futureClass] ; }
+                        }
                         //console.log('Found a class named <'+futureClass+'>') ;
                         state = 100 ;
                         // TODO using future constructor and future class
@@ -192,6 +198,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                         state = engine.states[code] ;
                         if (state >= 0 && state < clen) {
                             value = constants[state] ;
+                            //console.log("constant["+state+"]=<"+value+">") ;
                             hasValue = true ;
                             state = -1 ;
                         }
@@ -203,48 +210,63 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                     state = -1 ;
                     break ;
                 case 100: // dictionary reading initialization
-                    value = {} ;
+                    count = a[i++] ;
+                    if (typeof FutureConstructor === 'function') {
+                        value = new FutureConstructor() ;
+                        //console.log("did define a new object of class "+ value.isa) ;
+                    }
+                    else {
+                        //console.log("Registering new dictionary as "+this.objects.length+"nth object") ;
+                        value = {} ;
+                    }
                     hasValue = true ;
                     index = this.objects.length ;
                     this.objects.push(value) ;
-                    futureState = {s:0, i:0, n:a[i++], o:value, index:index} ;
-                    //if (futureClass) { futureState.cls = futureClass ; }
-                    //if (futureConstructor) { futureState.fn = futureConstructor ; }
-                    state = 101 ;
+                    if (count > 0) {
+                        futureState = {s:0, i:0, n:count, o:value, index:index} ;
+                        state = 101 ;
+                    }
+                    else { state = -1 ; }
                     break ;
                 case 101: // read dictionary key
                     currentState.k = this.keys[a[i++]] ; // the key is a string
                     //console.log('     did read key \"'+currentState.k+'\"') ;
-                    state = -1 ;
+                    state = -2 ;
                     break ;
                 case 102: // array reading initialization
                     count = a[i++] ;
                     value = [] ;
+                    //console.log("Registering new Array as "+this.objects.length+"nth object") ;
                     this.objects.push(value) ;
                     hasValue = true ;
-                    futureState = {s:1, i:0, n:count, o:value} ;
+                    if (count > 0) { futureState = {s:1, i:0, n:count, o:value} ; }
                     state = -1 ;
                     break ;
                 case 103: // naturals array reading initialization
                     count = a[i++] ;
                     value = new MSNaturalArray() ;
+                    //console.log("Registering new Natural Array as "+this.objects.length+"nth object") ;
                     this.objects.push(value) ;
                     hasValue = true ;
-                    futureState = {s:-1, i:0, n:count, o:value} ;
-                    state = 104 ;
+                    if (count > 0) {
+                        futureState = {s:-1, i:0, n:count, o:value} ;
+                        state = 104 ;
+                    }
+                    else { state = -1 ; }
                     break ;
                 case 104: // contents of natural array reading
                     currentState.o.push(a[i++]) ;
                     currentState.i++ ;
                     if (currentState.i === currentState.n) {
                         stack.pop() ;
-                        //console.log('      <<<< did pop stack') ;
+                        //console.log('      <<<< did pop stack 104') ;
                         currentState = stack.length ? stack[stack.length - 1] : null ;
                         state = -1 ;
                     }
                     break ;
                 case 105: // couple reading initialization
                     value = new MSCouple() ;
+                    //console.log("Registering new Couple as "+this.objects.length+"nth object") ;
                     this.objects.push(value) ;
                     hasValue = true ;
                     futureState = {s:2, i:0, n:2, o:value} ;
@@ -253,21 +275,24 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                 case 106: // simple string or decimal reading
                     value = a[i++] ;
                     hasValue = true ;
+                    //console.log("Registering new object '"+value+"' as "+this.objects.length+"nth object") ;
                     this.objects.push(value) ;
                     state = -1 ;
                     break ;
                 case 107: // data reading
                     value = MSData.initWithBase64String(a[i++]) ;
                     hasValue = true ;
+                    //console.log("Registering new data '"+value+"' as "+this.objects.length+"nth object") ;
                     this.objects.push(value) ;
                     state = -1 ;
                     break ;
                 case 108: // date reading
-                    value = a[i++] ;
-                    if (value >= Date.DISTANT_FUTURE) { value =  Date.DISTANT_FUTURE ; }
-                    else if ( value <= -Date.DISTANT_PAST) { value = Date.DISTANT_PAST ; }
+                    value = 1000 * a[i++] ;
+                    if (value >= Date.DISTANT_FUTURE_TS) { value =  Date.DISTANT_FUTURE ; }
+                    else if ( value <= Date.DISTANT_PAST_TS) { value = Date.DISTANT_PAST ; }
                     else {
-                        value = Date.initWithUTCSeconds(value) ;
+                        value = Date.initWithUTCTime(value) ;
+                        //console.log("Registering new date '"+value+"' as "+this.objects.length+"nth object") ;
                         this.objects.push(value) ;
                     }
                     hasValue = true ;
@@ -276,6 +301,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                 case 109: // color reading
                     value = new MSColor(a[i++]) ;
                     hasValue = true ;
+                    //console.log("Registering new coloe '"+value+"' as "+this.objects.length+"nth object") ;
                     this.objects.push(value) ;
                     state = -1 ;
                     break ;
@@ -293,24 +319,24 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                 switch(currentState.s) {
                     case 0:
                         ////console.log('     dict[\''+currentState.k+'\'] = '+MSTools.stringify(value)) ;
-                        //console.log('     dict[\''+currentState.k+'\'] = ' + value);
+                        //console.log('     dict[\''+currentState.k+'\'] = ' + dst(value));
                         currentState.o[currentState.k] = value ;
                         currentState.nextState = 101 ;
                         break ;
                     case 1:
                         ////console.log('     array['+currentState.i+'] = '+MSTools.stringify(value)) ;
-                        //console.log('     array['+currentState.i+'] = ' + value) ;
+                        //console.log('     array['+currentState.i+'] = ' + dst(value)) ;
                         currentState.o[currentState.i] = value ;
                         break ;
                     case 2:
                         ////console.log('     couple.firstMember = '+MSTools.stringify(value)) ;
-                        //console.log('     couple.firstMember = ' + value) ;
+                        //console.log('     couple.firstMember = ' + dst(value)) ;
                         currentState.o.firstMember = value ;
                         currentState.s = 3 ;
                         break ;
                     case 3:
                         ////console.log('     couple.secondMember = '+MSTools.stringify(value)) ;
-                        //console.log('     couple.secondMember = ' + value) ;
+                        //console.log('     couple.secondMember = ' + dst(value)) ;
                         currentState.o.secondMember = value ;
                         break ;
                     default:
@@ -320,13 +346,13 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                 if (currentState.i === currentState.n) {
                     stack.pop() ;
                     currentState = stack.length ? stack[stack.length - 1] : null ;
-                    //console.log('      <<<< did pop stack') ;
+                    /*console.log('      <<<< did pop stack EOL') ;
                     if (currentState) {
-                        //console.log('      new current state.s = '+currentState.s+', i = '+currentState.i+', n = '+currentState.n+', => '+currentState.nextState) ;
+                        console.log('      new current state.s = '+currentState.s+', i = '+currentState.i+', n = '+currentState.n+', => '+currentState.nextState) ;
                     }
                     else {
-                        //console.log('      : stack is empty') ;
-                    }
+                        console.log('      : stack is empty') ;
+                    }*/
                 }
             }
             if (futureState) {
@@ -336,8 +362,9 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                 //console.log('      new current state.s = '+currentState.s+', i = '+currentState.i+', n = '+currentState.n+', => '+currentState.nextState) ;
             }
         }
-        if (stack.length > 0) { throw "Bad final stack with current state "+stack.lastObject().s ; }
+        //console.log('---- MSTE automat final state : '+state+' stack depth : '+stack.length+'--------------------------') ;
         if (state !== -1)    { throw "Bad final state "+state ; }
+        if (stack.length > 0) { throw "Bad final stack with current stack state "+stack.lastObject().s ; }
     }
 }, true) ;
 
@@ -400,9 +427,15 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Encoder,
                 o.toMSTE(this) ;
             }
             else if (this.shouldPushObject(o)) {
-                var i, count, keys = null, idx, k, v, t, total = 0 ;
+                var i, count, keys = null, idx, k, v, t, total = 0, customClass = null ;
 
-                if ($length(o.isa)) { this.pushClass(o.isa) ; }
+                if (typeof o.toMSTEClass === 'function') {
+                    customClass = o.toMSTEClass() ;
+                    if (typeof customClass === "string" && customClass.length) {
+                        this.pushClass(customClass) ;
+                    }
+                    else { customClass = null ; }
+                }
                 else { this.stream.push(30) ; } // a standard dictionary
 
                 if ((typeof o.msteKeys) === 'function') {

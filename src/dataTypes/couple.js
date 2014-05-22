@@ -16,6 +16,10 @@ MSTools.defineHiddenConstants(MSCouple.prototype, {
 // ================  instance methods =============
 MSTools.defineInstanceMethods(MSCouple, {
     toString: function() { return [this.firstMember, this.secondMember].toString() ; },  // the same to string as an array
+    isEqualTo: function(other, options) {
+        if (this === other) { return true ; }
+        return $ok(other) && this.isa === other.isa && $equals(this.firstMember, other.firstMember, options) && $equals(this.secondMember, other.secondMember, options)? true : false ;
+    },
     toMSTE: function(encoder) {
         if (encoder.shouldPushObject(this)) {
             var v, i, count = this.length ;

@@ -113,6 +113,7 @@ MSTools.defineMethods(MSData, {
                 if (c === paddingChar) {
                     i = i % 4;
                     if (i === 1) { return null ; }
+                    i-- ;
                     for (j = 0 ; j < i ; j++) { result.push(array[j]) ; }
                 }
             }
@@ -135,9 +136,34 @@ MSTools.defineInstanceMethods(MSData, {
         }
         return String.EMPTY_STRING ;
     },
-    // TODO: concat
-    // TODO: slice
-    // TODO: splice
+    concat: function() {
+        var r = new MSData(this), i, count = arguments.length ;
+
+        function _addData(d, s) {
+            var i, count = s.length ;
+            for (i = 0 ; i < count ; i++) { d.push(s[i]) ; }
+        }
+        for (i = 0 ; i < count ; i++) { _addData(r, arguments[i]) ; }
+
+        return r ;
+    },
+    slice: function(start, end) {
+        var r = new MSData() ;
+        if (!$ok(start)) { start = 0 ; }
+        if (!$ok(end)) { end = this.length ; }
+        if (start < 0) { start = this.length + start ; }
+        if (end < 0) { end = this.length + start ; }
+        if (start < 0) { start = 0 ;}
+        if (end > this.length) { end = this.length ; }
+
+        for (;start < end;start++) { r.push(this[start]) ; }
+
+        return r ;
+    },
+    /*splice: function(index, n) {
+        var removed = Array.prototype.splice.apply(this, arguments) ;
+        return removed ;
+    },*/
     toBase64String: function(tokens, paddingChar) {
         var i, end, array, token ;
 

@@ -165,6 +165,10 @@ MSTools.defineInstanceMethods(MSColor, {
         }
         return {h: hue, s: saturation, b: brightness} ;
     },
+    isEqualTo: function(other, options) {
+        if (this === other) { return true ; }
+        return $ok(other) && this.isa === other.isa && this.toRGBA() === other.toRGBA() ? true : false ;
+    },
     toMSTE: function(encoder) {
         if (encoder.shouldPushObject(this)) {
             var v, i, count = this.length ;

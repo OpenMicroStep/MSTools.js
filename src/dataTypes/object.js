@@ -5,6 +5,9 @@
 
 
 // ================  instance methods =============
+MSTools.defineInstanceMethods(Object, {
+    isEqualTo: function(other, options) { return this === other ? true : false ; }
+}) ;
 
 MSTools.defineInstanceMethods(Object, {
     className:function() { return $length(this.isa) ? this.isa : (typeof this) ; },
