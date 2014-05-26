@@ -16,6 +16,12 @@
 		"$ok": true,
 		"$length" : true,
 		"$div" : true,
-		"$equals" : true
+		"$equals" : true,
+        "module": true,
+        "exports": true,
+        "MSColor": true,
+        "MSData": true,
+        "MSNaturalArray": true,
+        "MSCouple": true
     }
 }

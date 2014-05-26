@@ -87,7 +87,12 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
         this.objects = [] ;
         this.index = 0 ;
 
-        a = JSON.parse(source) ;
+        if (typeof source === "string") {
+            a = JSON.parse(source) ;
+        } else {
+            a = source;
+        }
+
 
         n = $length(a) ;
         if (n < 4) { throw "Unable to decode MSTE Source : two few tokens" ; }
