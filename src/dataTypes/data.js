@@ -1,47 +1,33 @@
 // ================ class interface ====================
-/* jshint latedef:false */
+/* global MSNaturalArray */
 
-MSTools.subclass(MSData, Array, 'Data') ;
+// with this constructor a new MSData(10) creates a data with the byte '10' at first position
+function MSData() {
+    var a, ret = new MSNaturalArray(), i, count = arguments.length ;
+    var localConstructor = this.constructor ;
 
-function MSData()
-{
-    var i, count = arguments.length ;
+    Object.setPrototypeOf(ret, localConstructor.prototype) ;
 
-    if (count === 0 || (count === 1 && arguments[0] === null)) { Array.call(this) ; }
-    else if (count === 1) {
-        var a = arguments[0], v, l ;
-        switch(a.isa) {
-            case 'Number':
-                Array.call(this, a) ;
-                break ;
-
-            case 'String':
-                if ((count = a.length) === 0) { Array.call(this) ; break ; }
-                Array.call(this, count) ;
-                for (i = 0 ; i < count ; i++) { this.push(a.charCodeAt(i) & 0xff) ; }
-                break ;
-
-            default:
-                if (a.isArray) {
-                    if ((count = a.length) === 0) { Array.call(this) ; break ; }
-                    Array.call(this, count) ;
-                    for (i = 0 ; i < count ; i++) {
-                        v = a[i] ; if (v < 0) { v = 0 ; }
-                        Array.prototype.push.call(this, v & 0xff) ;
-                    }
-                    break ;
-                }
-                throw "Impossible to create a data with argument "+a ;
-        }
+    // console.log('wanted to create a data new with '+count+' arguments :') ;
+    if (count === 1 && (typeof (a = arguments[0])) === 'string') {
+        count = a.length ;
+        for (i = 0 ; i < count ; i++) { ret.push(a.charCodeAt(i) & 0xff) ; }
     }
     else {
-        Array.call(this, count) ;
-        for (i = 0 ; i < count ; i++) { this.push(arguments[i]) ; }
+        for (i = 0 ; i < count ; i++) {
+            a = arguments[i] ;
+            //console.log('arguments['+i+']=<'+a+'> ('+(typeof a)+')') ;
+            if ($ok(a) && a.isArray) { localConstructor.prototype.push.apply(ret, a) ; }
+            else { ret.push(a) ; }
+        }
     }
+    return ret ;
 }
-/* jshint latedef:true */
+
+MSData.prototype = Object.create(MSNaturalArray.prototype, { constructor: {value: MSData} });
 
 // ================ constants ====================
+MSTools.defineHiddenConstant(MSData.prototype,'isa', 'Data', true) ;
 MSTools.defineConstants(MSData, {
     EMPTY_DATA:new MSData()
 }, true) ;
@@ -124,6 +110,18 @@ MSTools.defineMethods(MSData, {
 
 // ================  instance methods =============
 MSTools.defineInstanceMethods(MSData, {
+    // to spead data implementation we did rewrite the byteAtIndex and the objectAtIndex method
+    byteAtIndex: function(i) { var v = Number(this[i]) ; return v > 0 ? v & 0xff : 0 ; }, // works because NaN > 0 is false
+    objectAtIndex: function(i) { var v = Number(this[i]) ; return v > 0 ? v & 0xff : 0 ; },
+    push: function() {
+        var o, i, count = arguments.length ;
+        for (i = 0 ; i < count ; i++) {
+            // console.log('push('+arguments[i]+') '+(typeof arguments[i])) ;
+            o = Number(arguments[i]) ; if (o < 0) { o = 0 ;}
+            Array.prototype.push.call(this, o & 0xff) ;
+        }
+    },
+	// unshift, concat, slice and splice are inherited from MSNaturalArray
     toString: function() {
         var i, count = this.length ;
         if (count) {
@@ -136,34 +134,6 @@ MSTools.defineInstanceMethods(MSData, {
         }
         return String.EMPTY_STRING ;
     },
-    concat: function() {
-        var r = new MSData(this), i, count = arguments.length ;
-
-        function _addData(d, s) {
-            var i, count = s.length ;
-            for (i = 0 ; i < count ; i++) { d.push(s[i]) ; }
-        }
-        for (i = 0 ; i < count ; i++) { _addData(r, arguments[i]) ; }
-
-        return r ;
-    },
-    slice: function(start, end) {
-        var r = new MSData() ;
-        if (!$ok(start)) { start = 0 ; }
-        if (!$ok(end)) { end = this.length ; }
-        if (start < 0) { start = this.length + start ; }
-        if (end < 0) { end = this.length + start ; }
-        if (start < 0) { start = 0 ;}
-        if (end > this.length) { end = this.length ; }
-
-        for (;start < end;start++) { r.push(this[start]) ; }
-
-        return r ;
-    },
-    /*splice: function(index, n) {
-        var removed = Array.prototype.splice.apply(this, arguments) ;
-        return removed ;
-    },*/
     toBase64String: function(tokens, paddingChar) {
         var i, end, array, token ;
 
@@ -196,27 +166,6 @@ MSTools.defineInstanceMethods(MSData, {
                 break ;
         }
         return array.join("") ;
-    },
-    unshift: function() {
-        var count = arguments.length ;
-        if (count) {
-            var i, a = new Array(count), v ;
-            for (i = 0 ; i < count ; i++) {
-                v = Number(arguments[i]) ; if (v < 0) { v = 0 ; }
-                a[i] = v & 0xff ;
-            }
-            Array.prototype.unshift.apply(this, a) ; // unshift
-        }
-        return this.length ;
-    },
-    byteAtIndex: function(i) { var v = this[i] ;  return v < 0 ? 0 : (v & 0xff) ;},
-    push: function() {
-        var o, i, count = arguments.length ;
-        for (i = 0 ; i < count ; i++) {
-            // console.log('push('+arguments[i]+') '+(typeof arguments[i])) ;
-            o = Number(arguments[i]) ; if (o < 0) { o = 0 ;}
-            Array.prototype.push.call(this, o & 0xff) ;
-        }
     },
     toMSTE: function(encoder) {
         if (this.length === 0) { encoder.push(6) ; }

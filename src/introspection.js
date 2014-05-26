@@ -40,40 +40,6 @@ MSTools.subclass = function(theNewClass, theSuperClass, newIsa) {
     }
 } ;
 
-var __localUniqueID = 0 ;
-MSTools.localUniqueID = function() { return '$mst'+ (++__localUniqueID) ; } ;
-
-function __recursiveValueForPath(object, path) {
-    if ($ok(object) && $ok(path)) {
-        var p = path.toString() ;
-        if ($length(p)) {
-            var res ;
-            var pos = p.indexOf('.') ;
-            if (pos === -1) {
-                res = object[p] ;
-                if (res && (typeof res) === 'function') { res = res.call(object) ; }
-                return res ;
-            }
-            else if (pos > 1 && pos + 1 < p.length) {
-                res = object[p.slice(0, pos)] ;
-                if (res) {
-                    if (typeof res === 'function') { res = res.call(object) ; }
-                    res =  __recursiveValueForPath(res, p.slice(pos+1)) ;
-                }
-            }
-            if ((typeof res) === 'undefined') { return null ; }
-            return res ;
-        }
-    }
-    return null ;
-}
-
-MSTools.isa = 'MSTools' ;
-MSTools.toMSTE = function(encoder) { encoder.encodeException(this) ; } ;
-
-// do we define Object.prototype.isa as 'Object' ?
-
-MSTools.valueForPath = __recursiveValueForPath ;
 
 
 

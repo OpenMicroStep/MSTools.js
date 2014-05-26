@@ -91,7 +91,8 @@ MSTools.defineInstanceMethods(Array, {
         return null ;
     },
     firstObject:function() { return this.length ? this[0] : null ; },
-    lastObject:function() { return this.length ? this[this.length - 1] : null ;}
+    lastObject:function() { return this.length ? this[this.length - 1] : null ;},
+	objectAtIndex:function(i) { return this[i] ; }
 }) ;
 
 MSTools.defineInstanceMethods(Array, {

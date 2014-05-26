@@ -267,11 +267,10 @@ describe("==========Tests MSTE protocol ========", function() {
 		var data = [
 			new LocalPerson("Durand ¥-$-€", "Yves", new Date()),
 			new LocalPerson("Durand", "Claire", new Date()),
-			new LocalPerson("Durand", "Lou", new Date())			
+			new LocalPerson("Durand", "Lou", new Date())
 		] ;
         data[0]["maried_to"] = data[1];
         data[1]["maried_to"] = data[0];
-
         data[2]["father"] = data[0];
         data[2]["mother"] = data[1];
 
@@ -289,6 +288,7 @@ describe("==========Tests MSTE protocol ========", function() {
 		expect(r[0].isa).toBe('Person') ;
 		expect(r[1].isa).toBe('Person') ;
 		expect(r[2].isa).toBe('Person') ;
+		
         expect($equals(data, r)).toBe(false);
         expect($equals(data, r, {secondPrecision:true})).toBe(true);
 

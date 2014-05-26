@@ -10,6 +10,7 @@ var MSTools = (function(global) {
     // Define and export the Marionette namespace
     var MSTools = {};
 
+    // @include ./tools.js
     // @include ./introspection.js
 
     // ========= add things in known classes ==========
@@ -35,8 +36,8 @@ var MSTools = (function(global) {
 })(this);
 
 // ========= new classes ==========
+// @include ./dataTypes/naturals.js
 // @include ./dataTypes/data.js
 // @include ./dataTypes/color.js
-// @include ./dataTypes/naturals.js
 // @include ./dataTypes/couple.js
 // @include ./mste.js

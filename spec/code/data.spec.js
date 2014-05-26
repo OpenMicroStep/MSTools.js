@@ -1,16 +1,22 @@
 describe("==========Tests of data  ========", function() {
-	it("Testing constructor, concat, slice", function() {
+	beforeEach(function() {
+	    jasmine.addCustomEqualityTester($equals);
+	}) ;
+
+	it("Testing constructor, concat, slice, splice", function() {
 				
-		var n = new MSData(), n1, n2 ;
+		var n = new MSData(), n1, n2, n3, n4 ;
         expect(n.length).toBe(0);
 
 		n = new MSData(100, 80, 30, 77) ;
         expect(n.length).toBe(4);
         expect(MSTools.stringify(n)).toBe("[100,80,30,77]");
+		expect(n.objectAtIndex(2)).toEqual(30) ;
 
 		n1 = new MSData('AM NBCP') ;
         expect(n1.length).toBe(7);
 		expect(MSTools.stringify(n1)).toBe("[65,77,32,78,66,67,80]");
+		expect(n1.byteAtIndex(5)).toEqual(67) ;
 		
 		n2 = new MSData(80,90,100,110,112,113,114,115) ;
 		
@@ -18,10 +24,21 @@ describe("==========Tests of data  ========", function() {
         
 		expect(MSTools.stringify(r)).toBe("[65,77,32,78,66,67,80,100,80,30,77,80,90,100,110,112,113,114,115]");
 		
-		expect(MSTools.stringify(r.slice())).toBe(MSTools.stringify(r)) ;
-		expect(MSTools.stringify(r.slice(null,7))).toBe(MSTools.stringify(n1)) ;
-		expect(MSTools.stringify(r.slice(7,11))).toBe(MSTools.stringify(n)) ;
-		expect(MSTools.stringify(r.slice(11))).toBe(MSTools.stringify(n2)) ;
+		expect(r.slice()).toEqual(r) ;
+		expect(r.slice(null,7)).toEqual(n1) ;
+		expect(r.slice(7,11)).toEqual(n) ;
+		expect(r.slice(11)).toEqual(n2) ;
+		
+		
+		
+		n3 = r.splice(7,4, 91, 92, 93, 94, 95, '96', '97 ', 98) ;
+		expect(n3).toEqual(n) ;
+		expect(MSTools.stringify(r)).toBe(
+				"[65,77,32,78,66,67,80,91,92,93,94,95,96,97,98,80,90,100,110,112,113,114,115]"
+			) ;
+		n4 = r.splice(0,11) ;
+		expect(MSTools.stringify(r)).toBe("[95,96,97,98,80,90,100,110,112,113,114,115]") ;
+		expect(MSTools.stringify(n4)).toBe("[65,77,32,78,66,67,80,91,92,93,94]") ;
     });
 
 	/*it("Testing splice", function() {
