@@ -38,6 +38,7 @@ describe("==========Tests of natural arrays ========", function() {
 	    expect(n3.isa).toBe('Naturals') ;
 		expect(n3 instanceof Array).toBe(true) ;
 		expect(n3 instanceof MSNaturalArray).toBe(true) ;
+		expect(Array.isArray(n3)).toBe(true) ;
 	}) ;
 
 	/*

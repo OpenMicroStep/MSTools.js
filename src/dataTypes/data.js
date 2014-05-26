@@ -1,9 +1,10 @@
 // ================ class interface ====================
-/* global MSNaturalArray */
+/* global MSArray */
 
 // with this constructor a new MSData(10) creates a data with the byte '10' at first position
+// any array passed as an argument will be concatenated
 function MSData() {
-    var a, ret = new MSNaturalArray(), i, count = arguments.length ;
+    var a, ret = new MSArray(), i, count = arguments.length ;
     var localConstructor = this.constructor ;
 
     Object.setPrototypeOf(ret, localConstructor.prototype) ;
@@ -24,7 +25,7 @@ function MSData() {
     return ret ;
 }
 
-MSData.prototype = Object.create(MSNaturalArray.prototype, { constructor: {value: MSData} });
+MSData.prototype = Object.create(MSArray.prototype, { constructor: {value: MSData} });
 
 // ================ constants ====================
 MSTools.defineHiddenConstant(MSData.prototype,'isa', 'Data', true) ;
@@ -121,7 +122,7 @@ MSTools.defineInstanceMethods(MSData, {
             Array.prototype.push.call(this, o & 0xff) ;
         }
     },
-	// unshift, concat, slice and splice are inherited from MSNaturalArray
+    // unshift, concat, slice, filter and splice are inherited from MSArray
     toString: function() {
         var i, count = this.length ;
         if (count) {

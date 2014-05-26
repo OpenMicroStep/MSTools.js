@@ -36,6 +36,7 @@ var MSTools = (function(global) {
 })(this);
 
 // ========= new classes ==========
+// @include ./dataTypes/msarray.js
 // @include ./dataTypes/naturals.js
 // @include ./dataTypes/data.js
 // @include ./dataTypes/color.js

@@ -20,6 +20,7 @@ MSTools.defineInstanceMethods(MSCouple, {
         if (this === other) { return true ; }
         return $ok(other) && this.isa === other.isa && $equals(this.firstMember, other.firstMember, options) && $equals(this.secondMember, other.secondMember, options)? true : false ;
     },
+    toArray: function() { return [this.firstMember, this.secondMember] ; },
     toMSTE: function(encoder) {
         if (encoder.shouldPushObject(this)) {
             var v, i, count = this.length ;

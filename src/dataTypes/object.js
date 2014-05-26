@@ -18,5 +18,6 @@ MSTools.defineInstanceMethods(Object, {
     className:function() { return $length(this.isa) ? this.isa : (typeof this) ; },
     valueForPath:function(path) { return MSTools.valueForPath(this, path) ; },
     toInt:function() { return this.toNumber().toInt() ; },
+    toArray: function() { return [this] ; },
     toUInt:function(base) { return this.toInt().toUInt() ; }
 }, true) ;
