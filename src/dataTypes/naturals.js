@@ -8,7 +8,7 @@ MSNaturalArray.prototype = Object.create(MSArray.prototype, { constructor: {valu
 // ================ constants ====================
 MSTools.defineHiddenConstants(MSNaturalArray.prototype, {
     isa:'Naturals',
-    MSTECode:25
+    MSTECode:26
 }, true) ;
 
 // ================= class methods ===============

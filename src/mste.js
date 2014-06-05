@@ -1,5 +1,5 @@
 // ================ MSTE Singleton ====================
-/* global MSData, MSColor, MSNaturalArray, MSCouple */
+/* global MSData, MSColor, MSNaturalArray, MSCouple, MSDate */
 
 MSTools.MSTE = {
     isa:'MSTE',
@@ -30,27 +30,26 @@ MSTools.MSTE = {
         },
         {
             states:[
-                0,        1,        2,        3,        4,
-                5,        6,         -100,     -100,     9,
+                0,        1,      2,      3,      6,
+                -100,  -100,   -100,   -100,      9,
                 110,    110,    110,    110,    110,
                 110,    110,    110,    110,    110,
-                106,    106,    108,    109,    107,
-                103,    -100,    -100,    -100,    -100,
+                106,    106,    108,    111,    109,
+                107,    103,   -100,   -100,   -100,
                 100,    102,    105
             ],
             codeNames:[
-                'null', 'true', 'false', 'EMPTY_STRING', 'DISTANT_PAST',
-                'DISTANT_FUTURE', 'EMPTY_DATA', '** CODE7 **','** CODE8 **', '#REF',
+                'null', 'true', 'false', 'EMPTY_STRING', 'EMPTY_DATA',
+                '** CODE5 **', '** CODE6 **', '** CODE7 **','** CODE8 **', '#REF',
                 'CHAR', 'UCHAR', 'SHORT', 'USHORT', 'INT32',
                 'UINT32', 'INT64', 'UINT64', 'FLOAT', 'DOUBLE',
-                'DECIMAL', 'STRING', 'DATE', 'COLOR', 'DATA',
-                'NATURALS', '** CODE26 **', '** CODE27 **', '** CODE28 **', '** CODE29 **',
+                'DECIMAL', 'STRING', 'DATE', 'TIMESTAMP', 'COLOR',
+                'DATA', 'NATURALS', '** CODE27 **', '** CODE28 **', '** CODE29 **',
                 'DICT', 'ARRAY', 'COUPLE'
             ],
-            dictionaryCode:30,
             classCode:50,
             getClassIndex:function(code) { return code - 50 ;},
-            validCode:function(code) { return code < 0 || (code > 6 && code < 9) || (code > 25 && code < 30) || (code > 32 && code < 50) ? false : true ; },
+            validCode:function(code) { return code < 0 || (code > 4 && code < 9) || (code > 26 && code < 30) || (code > 32 && code < 50) ? false : true ; },
             version:0x0102
         }
     ]
@@ -110,7 +109,6 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
         //console.log('version = MSTE'+this.engine.version.toHexa(4)) ;
 
         this.crc = a[2] ;
-        // TODO: check the CRC
 
         cn = a[3].toUInt() ;
         if (5 + cn > n) { throw "Unable to decode MSTE Source : not enough tokens to store classes and a stream" ;}
@@ -138,7 +136,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
         -2              code reading after a dictionary key was read
         -1            code reading
 
-        0..6        Constants
+        0..4        Constants
 
         9            reference of an object
 
@@ -153,6 +151,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
         108            Date reading
         109            Color reading
         110            Simple (non referenced) numbers
+        111            Time stamp reading
 
         c             descriptions
 */
@@ -209,11 +208,13 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                         }
                     }
                     break ;
+
                 case 9: // obsolete : compatibility state. weak reference to an object
                     value = this.objects[a[i++]] ;
                     hasValue =  true ;
                     state = -1 ;
                     break ;
+
                 case 100: // dictionary reading initialization
                     count = a[i++] ;
                     if (typeof FutureConstructor === 'function') {
@@ -233,11 +234,13 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                     }
                     else { state = -1 ; }
                     break ;
+
                 case 101: // read dictionary key
                     currentState.k = this.keys[a[i++]] ; // the key is a string
                     //console.log('     did read key \"'+currentState.k+'\"') ;
                     state = -2 ;
                     break ;
+
                 case 102: // array reading initialization
                     count = a[i++] ;
                     value = [] ;
@@ -247,6 +250,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                     if (count > 0) { futureState = {s:1, i:0, n:count, o:value} ; }
                     state = -1 ;
                     break ;
+
                 case 103: // naturals array reading initialization
                     count = a[i++] ;
                     value = new MSNaturalArray() ;
@@ -259,6 +263,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                     }
                     else { state = -1 ; }
                     break ;
+
                 case 104: // contents of natural array reading
                     currentState.o.push(a[i++]) ;
                     currentState.i++ ;
@@ -269,6 +274,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                         state = -1 ;
                     }
                     break ;
+
                 case 105: // couple reading initialization
                     value = new MSCouple() ;
                     //console.log("Registering new Couple as "+this.objects.length+"nth object") ;
@@ -277,6 +283,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                     futureState = {s:2, i:0, n:2, o:value} ;
                     state = -1 ;
                     break ;
+
                 case 106: // simple string or decimal reading
                     value = a[i++] ;
                     hasValue = true ;
@@ -284,6 +291,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                     this.objects.push(value) ;
                     state = -1 ;
                     break ;
+
                 case 107: // data reading
                     value = MSData.initWithBase64String(a[i++]) ;
                     hasValue = true ;
@@ -291,30 +299,42 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                     this.objects.push(value) ;
                     state = -1 ;
                     break ;
-                case 108: // date reading
-                    value = 1000 * a[i++] ;
-                    if (value >= Date.DISTANT_FUTURE_TS) { value =  Date.DISTANT_FUTURE ; }
-                    else if ( value <= Date.DISTANT_PAST_TS) { value = Date.DISTANT_PAST ; }
-                    else {
-                        value = Date.initWithUTCTime(value) ;
-                        //console.log("Registering new date '"+value+"' as "+this.objects.length+"nth object") ;
-                        this.objects.push(value) ;
-                    }
+
+                case 108: // true date reading
+                    value = new MSDate(a[i++] - MSDate.SecsFrom19700101To20010101) ; // conversion from EPOCH to 01012001 reference point
                     hasValue = true ;
-                    state = -1 ;
-                    break ;
-                case 109: // color reading
-                    value = new MSColor(a[i++]) ;
-                    hasValue = true ;
-                    //console.log("Registering new coloe '"+value+"' as "+this.objects.length+"nth object") ;
+                    //console.log("Registering new date '"+value+"' as "+this.objects.length+"nth object") ;
                     this.objects.push(value) ;
                     state = -1 ;
                     break ;
+
+                case 109: // color reading
+                    value = new MSColor(a[i++]) ;
+                    hasValue = true ;
+                    // console.log("Registering new coloe '"+value+"' as "+this.objects.length+"nth object") ;
+                    this.objects.push(value) ;
+                    state = -1 ;
+                    break ;
+
                 case 110: // simple numbers (they are not referenced in objects)
                     value = a[i++] ;
                     hasValue = true ;
                     state = -1 ;
                     break ;
+
+                case 111: // TIMESTAMP READING
+                    value = 1000 * a[i++] ; // the initial value can be a double
+
+                    if (value >= Date.DISTANT_FUTURE_TS) { value = Date.DISTANT_FUTURE_TS ; }
+                    else if ( value <= Date.DISTANT_PAST_TS) { value = Date.DISTANT_PAST_TS ; }
+
+                    value = Date.initWithUTCTime(value) ;
+                    //console.log("Registering new timestamp '"+value+"' as "+this.objects.length+"nth object") ;
+                    this.objects.push(value) ;
+                    hasValue = true ;
+                    state = -1 ;
+                    break ;
+
                 default:
                     //console.log("Bad state encoutered during parsing") ;
                     throw 'Bad state encoutered during parsing' ;

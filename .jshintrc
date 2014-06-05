@@ -20,8 +20,11 @@
         "module": true,
         "exports": true,
         "MSColor": true,
+        "MSArray": true,
+        "MSDate": true,
         "MSData": true,
         "MSNaturalArray": true,
-        "MSCouple": true
+        "MSCouple": true,
+        "GLOBAL": true          // Node.js global obj
     }
 }

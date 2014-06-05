@@ -1,3 +1,7 @@
+if (typeof module !== 'undefined' && module.exports) {  // On Node.js
+    require("../../tmp/MSTools");
+}
+
 describe("==========Tests of natural arrays ========", function() {
 
 	beforeEach(function() {
@@ -41,13 +45,6 @@ describe("==========Tests of natural arrays ========", function() {
 		expect(Array.isArray(n3)).toBe(true) ;
 	}) ;
 
-	/*
-	
-	var r = new MSNaturalArray() ;
-    MSTools.sliceInto(r, start, end) ;
-    return r ;
-    
-	*/
 	it("Testing constructor", function() {
 				
 		var n = new MSNaturalArray() ;

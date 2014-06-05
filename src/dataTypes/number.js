@@ -2,6 +2,11 @@
 MSTools.defineHiddenConstant(Number.prototype, 'isa', 'Number', true) ;
 MSTools.defineHiddenConstant(Number, '__toHexaString', '0000000000000000', true) ;
 // ================= class methods ===============
+MSTools.defineMethods(Number, {
+    isInteger:function(v) {
+        return typeof v === "number" && isFinite(v) && v > -9007199254740992 && v < 9007199254740992 && Math.floor(v) === v;
+    }
+}) ;
 
 // ================  instance methods =============
 MSTools.defineInstanceMethods(Number, {

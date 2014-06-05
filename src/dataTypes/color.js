@@ -172,8 +172,7 @@ MSTools.defineInstanceMethods(MSColor, {
     toArray: function() { return [this.red, this.green, this.blue, this.alpha] ; },
     toMSTE: function(encoder) {
         if (encoder.shouldPushObject(this)) {
-            var v, i, count = this.length ;
-            encoder.push(23) ;
+            encoder.push(24) ;
             encoder.push(this.toNumber()) ;
         }
     }

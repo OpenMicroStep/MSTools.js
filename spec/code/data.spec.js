@@ -1,3 +1,7 @@
+if (typeof module !== 'undefined' && module.exports) {  // On Node.js
+    require("../../tmp/MSTools");
+}
+
 describe("==========Tests of data  ========", function() {
 	beforeEach(function() {
 	    jasmine.addCustomEqualityTester($equals);

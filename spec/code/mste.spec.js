@@ -1,3 +1,7 @@
+if (typeof module !== 'undefined' && module.exports) {  // On Node.js
+    require("../../tmp/MSTools");
+}
+
 describe("==========Tests MSTE protocol ========", function() {
 	
 	it("Test decoding of version MSTE0101", function() {
@@ -110,7 +114,7 @@ describe("==========Tests MSTE protocol ========", function() {
 	}) ;
 	
 	it("decodes OBJC demo mste chain", function () {
-        var JMChain = '["MSTE0102",60,"CRC30DA22E7",2,"Person","Person2",4,"firstName","maried-to","name","birthday",31,8,50,4,0,21,"Yves",1,50,4,0,21,"Claire",1,9,1,2,21,"Durand",3,22,-207360000,2,21,"Durand \u00A5-$-\u20AC",3,22,-243820800,9,3,51,3,2,9,5,0,21,"Lou",3,22,552096000,6,24,"Rjd5NA==",9,1,9,12,6]';
+        var JMChain = '["MSTE0102",60,"CRC30DA22E7",2,"Person","Person2",4,"firstName","maried-to","name","birthday",31,8,50,4,0,21,"Yves",1,50,4,0,21,"Claire",1,9,1,2,21,"Durand",3,22,-207360000,2,21,"Durand \u00A5-$-\u20AC",3,22,-243820800,9,3,51,3,2,9,5,0,21,"Lou",3,22,552096000,4,25,"Rjd5NA==",9,1,9,12,4]';
 
         var r = MSTools.MSTE.parse(JMChain) ;
 
@@ -138,15 +142,15 @@ describe("==========Tests MSTE protocol ========", function() {
 					},
 					<ref to Claire>,
 					{ // 51 e.g. "Person2",3, --- Object 9 
-						/2/name:"Durand", // 2, 9 ===> ref to object 5
+						/2/name:"Durand", // 9, 5 ===> ref to object 5
 						/0/firstName:"Lou", // 21,"Lou" --- Object 10
 						/3/birthday:<date>, // 22, date represented by 552096000 --- Object 11
 					},
-					<empty data>, // 6, 
-					<data>, // 24,"Rjd5NA==" --- Object 12
+					<empty data>, // 4, 
+					<data>, // 25,"Rjd5NA==" --- Object 12
 					<ref to Yves>, // 9,1
 					<ref to the last data object>, // 9,12,
-					<empty data> //6
+					<empty data> //4
 				]
 			]
 		*/
@@ -164,7 +168,7 @@ describe("==========Tests MSTE protocol ========", function() {
     });
 
 	it("decodes OBJC demo mste chain with local classes", function () {
-        var JMChain = '["MSTE0102",60,"CRC30DA22E7",2,"Person","Person2",4,"firstName","maried-to","name","birthday",31,8,50,4,0,21,"Yves",1,50,4,0,21,"Claire",1,9,1,2,21,"Durand",3,22,-207360000,2,21,"Durand \u00A5-$-\u20AC",3,22,-243820800,9,3,51,3,2,9,5,0,21,"Lou",3,22,552096000,6,24,"Rjd5NA==",9,1,9,12,6]';
+        var JMChain = '["MSTE0102",60,"CRC30DA22E7",2,"Person","Person2",4,"firstName","maried-to","name","birthday",31,8,50,4,0,21,"Yves",1,50,4,0,21,"Claire",1,9,1,2,21,"Durand",3,22,-207360000,2,21,"Durand \u00A5-$-\u20AC",3,22,-243820800,9,3,51,3,2,9,5,0,21,"Lou",3,22,552096000,4,25,"Rjd5NA==",9,1,9,12,4]';
 
 		function Person1() { } 
 		function Person2() { } 
@@ -243,7 +247,6 @@ describe("==========Tests MSTE protocol ========", function() {
 		expect(r[2].mother).toBe(r[1]) ;
 		
         expect($equals(data, r)).toBe(false);
-        expect($equals(data[0], r[0], {secondPrecision:true})).toBe(false);
 
     });
     
@@ -289,8 +292,7 @@ describe("==========Tests MSTE protocol ========", function() {
 		expect(r[1].isa).toBe('Person') ;
 		expect(r[2].isa).toBe('Person') ;
 		
-        expect($equals(data, r)).toBe(false);
-        expect($equals(data, r, {secondPrecision:true})).toBe(true);
+        expect($equals(data, r)).toBe(true);
 
     });
 

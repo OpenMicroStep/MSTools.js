@@ -1,3 +1,8 @@
+
+if (typeof module !== 'undefined' && module.exports) {  // On Node.js
+    require("../../tmp/MSTools");
+}
+
 describe("==========Tests de l'objet MSColor ========", function() {
 	
 	it("Test du constructeur", function() {

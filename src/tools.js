@@ -26,6 +26,19 @@ function __recursiveValueForPath(object, path) {
     return null ;
 }
 
+function __prepareCRCTable() {
+    var c, n, k, ret = [];
+    for(n = 0 ; n < 256 ; n++) {
+        c = n;
+        for (k = 0; k < 8; k++) {
+            c = ((c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1)) ;
+        }
+        ret[n] = c;
+    }
+    return ret ;
+
+}
+
 MSTools.isa = 'MSTools' ;
 MSTools.toMSTE = function(encoder) { encoder.encodeException(this) ; } ;
 
@@ -33,23 +46,22 @@ MSTools.toMSTE = function(encoder) { encoder.encodeException(this) ; } ;
 
 MSTools.valueForPath = __recursiveValueForPath ;
 
-MSTools.sliceInto = function(r, start, end) {
-    if (!$ok(start)) { start = 0 ; }
-    if (!$ok(end)) { end = this.length ; }
-    if (start < 0) { start = this.length + start ; }
-    if (end < 0) { end = this.length + start ; }
-    if (start < 0) { start = 0 ;}
-    if (end > this.length) { end = this.length ; }
 
-    for (;start < end;start++) { r.push(this[start]) ; }
-} ;
+MSTools.__CRCTable = __prepareCRCTable() ;
 
-MSTools.concatInto = function(r, args) {
-    var i, count = args.length ;
-    function _addData(d, s) {
-        var i, count = s.length ;
-        for (i = 0 ; i < count ; i++) { d.push(s[i]) ; }
+MSTools.crc32 = function(self, byteAtIndexFn) {
+    var crc = 0 ^ -1;
+    if ($ok(self)) {
+        if (typeof byteAtIndexFn !== 'function') {
+            byteAtIndexFn = self.constructor.prototype.byteAtIndex ;
+        }
+        if (typeof byteAtIndexFn === 'function') {
+            var i, length = self.length, crcTable = MSTools.__CRCTable ;
+            for (i = 0; i < length; i++ ) {
+                crc = (crc >>> 8) ^ crcTable[(crc ^ byteAtIndexFn.call(self, i)) & 0xff];
+            }
+        }
     }
-    for (i = 0 ; i < count ; i++) { _addData(r, args[i]) ; }
+    return (crc ^ -1) >>> 0 ;
 } ;
 

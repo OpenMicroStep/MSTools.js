@@ -1,3 +1,4 @@
+/* global MSDate */
 
 // ================ constants ====================
 MSTools.defineHiddenConstant(String.prototype, 'isa', 'String', true) ;
@@ -156,11 +157,13 @@ MSTools.defineInstanceMethods(String, {
         return null ;
     },
     parseDate:function(fn) {
-        return this.parseWithPatterns(String.__parseDatePatterns, fn || (function(d,m,y) { return Date.validDate(d,m,y) ? new Date(y, m-1, d) : null ; })) ;
+        return this.parseWithPatterns(String.__parseDatePatterns, fn || (function(d,m,y) { return MSDate.validDate(y,m,d) ? new MSDate(y, m, d) : null ; })) ;
     },
     parseTime:function(fn) {
         return this.parseWithPatterns(String.__parseTimePatterns, fn || (function(h,m) { return m >= 0 && m < 60 && h >= 0 && (h < 24 || (h === 24 && m === 0)) ? h*100+m : null ; })) ;
     },
+    // the toArray() method is inherited from Object. That means "aString" is transformed to ["aString"]. Should'nt we do something else ?
+    byteAtIndex: function(i) { return this.charCodeAt(i) & 0xff; },
     toMSTE:function(encoder) {
         if (this.length === 0) { encoder.push(3) ; }
         else {

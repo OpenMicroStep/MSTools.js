@@ -1,3 +1,7 @@
+if (typeof module !== 'undefined' && module.exports) {  // On Node.js
+    require("../../tmp/MSTools");
+}
+
 describe("==========Tests object add-ons========", function() {	
 	it ("Testing valueForPath method", function() {
 		var a = {one:'one', two:{three:3, four:4}, five:['13/04/1966', 'six']} ;

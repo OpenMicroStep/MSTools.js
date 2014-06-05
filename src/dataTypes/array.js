@@ -91,13 +91,13 @@ MSTools.defineInstanceMethods(Array, {
         }
         return null ;
     },
-    toArray: function() { return Array.prototype.slice.call(this,0) ; },
     firstObject:function() { return this.length ? this[0] : null ; },
     lastObject:function() { return this.length ? this[this.length - 1] : null ;},
     objectAtIndex:function(i) { return this[i] ; }
 }) ;
 
 MSTools.defineInstanceMethods(Array, {
+    toArray: function() { return Array.prototype.slice.call(this,0) ; },
     toMSTE: function(encoder) {
         if (encoder.shouldPushObject(this)) {
             var i, count = this.length ;

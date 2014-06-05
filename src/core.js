@@ -1,4 +1,5 @@
 // we only add some functions into the main scope
+
 function $ok(self) { return ((self === null || (typeof self) === 'undefined') ? false : true) ; }
 function $length(self) { return ((self === null || (typeof self) === 'undefined' || (typeof self.length) === 'undefined') ? 0 : self.length) ; }
 function $div(a, b) { return (a/b /* / keep that commentary here please */) | 0 ; }
@@ -36,9 +37,24 @@ var MSTools = (function(global) {
 })(this);
 
 // ========= new classes ==========
+// @include ./dataTypes/msdate.js
 // @include ./dataTypes/msarray.js
 // @include ./dataTypes/naturals.js
 // @include ./dataTypes/data.js
 // @include ./dataTypes/color.js
 // @include ./dataTypes/couple.js
 // @include ./mste.js
+
+if (typeof module !== 'undefined' && module.exports) {  // On Node.js
+    GLOBAL.MSTools = MSTools;
+    GLOBAL.$ok = $ok;
+    GLOBAL.$length = $length;
+    GLOBAL.$div = $div;
+    GLOBAL.$equals = $equals;
+    GLOBAL.MSColor = MSColor;
+    GLOBAL.MSDate = MSDate;
+    GLOBAL.MSArray = MSArray;
+    GLOBAL.MSData = MSData;
+    GLOBAL.MSNaturalArray = MSNaturalArray;
+    GLOBAL.MSCouple = MSCouple;
+}

@@ -88,6 +88,18 @@ module.exports = function(grunt) {
             }
         },
 
+        jasmine_node: {
+            options: {
+                forceExit: true,
+                match: '.',
+                matchall: false,
+                extensions: 'js',
+                specNameMatcher: 'spec'
+            },
+            all: ['spec/code/']
+        },
+
+
         jshint: {
             options: {
                 jshintrc : '.jshintrc'
@@ -134,6 +146,7 @@ module.exports = function(grunt) {
     grunt.registerTask('lint', 'Lints our sources', ['lintspaces', 'jshint']);
     grunt.registerTask('test', 'Run the unit tests.', ['lint', 'preprocess:dist', 'jasmine:dist', 'clean:tmp']);
    /* grunt.registerTask('dev', 'Auto-test while developing.', ['watch:dist']); */
+    grunt.registerTask('nodebuild', 'Build our library with jasmine node test.', ['replace', 'lint', 'clean', 'preprocess:dist', 'jasmine_node', 'concat', 'min', 'clean:tmp']);
     grunt.registerTask('build', 'Build our library.', ['replace', 'lint', 'clean', 'preprocess:dist', 'jasmine:dist', 'concat', 'min', 'clean:tmp']);
     grunt.registerTask('quickbuild', 'Build our library without time consuming jasmine tests and minifying.', ['replace', 'lint', 'clean', 'preprocess:debug', 'concat', 'clean:tmp']);
 };
