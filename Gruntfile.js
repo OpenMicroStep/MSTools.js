@@ -1,5 +1,7 @@
 module.exports = function(grunt) {
 
+    require('time-grunt')(grunt);
+
     require('load-grunt-tasks')(grunt, {
         pattern: ['grunt-*']
     });
@@ -39,7 +41,8 @@ module.exports = function(grunt) {
                         {
                             match: /\t/g,               // Tabs to spaces
                             replacement: '    '
-                        }, {
+                        },
+                        {
                             match: /[ \t]+\n/g,         // Trailing spaces
                             replacement: '\n'
                         }
@@ -64,25 +67,25 @@ module.exports = function(grunt) {
             }
         },
 
-        min : {
+        min: {
             dist: {
-                src : '<%= concat.dist.dest %>',
-                dest : 'dist/<%= pkg.name %>-<%= pkg.version %>.min.js',
-                options : {
+                src: '<%= concat.dist.dest %>',
+                dest: 'dist/<%= pkg.name %>-<%= pkg.version %>.min.js',
+                options: {
                     banner: "<%= banner %>"
                 }
             }
         },
 
-        jasmine : {
-            options : {
-                helpers : [],
-                specs : 'spec/code/**/*.spec.js',
-                vendor : [],
+        jasmine: {
+            options: {
+                helpers: [],
+                specs: 'spec/code/**/*.spec.js',
+                vendor: [],
                 keepRunner: true
             },
-            dist : {
-                src : [
+            dist: {
+                src: [
                     '<%= preprocess.dist.dest %>'
                 ]
             }
@@ -102,15 +105,15 @@ module.exports = function(grunt) {
 
         jshint: {
             options: {
-                jshintrc : '.jshintrc'
+                jshintrc: '.jshintrc'
             },
-            dist : [ 'src/**/*.js' ]
+            dist: [ 'src/**/*.js' ]
         },
 
         watch: {
-            dist : {
-                files : ['src/**/*.js', 'spec/**/*.js'],
-                tasks : ['test']
+            dist: {
+                files: ['src/**/*.js', 'spec/**/*.js'],
+                tasks: ['test']
             }
         },
 
@@ -139,14 +142,23 @@ module.exports = function(grunt) {
                 pushTo: 'origin',
                 gitDescribeOptions: '--tags --always --abbrev=1 --dirty=-d' // options to use with '$ git describe'
             }
+        },
+
+        notify: {
+            success: {
+                options: {
+                    title: 'Build complete',  // optional
+                    message: '<%= pkg.name %> build finished successfully.' //required
+                }
+            }
         }
     });
 
-    grunt.registerTask('default', 'An alias task for quick build.', ['quickbuild']);
+    grunt.registerTask('default', 'An alias task for build.', ['build']);
     grunt.registerTask('lint', 'Lints our sources', ['lintspaces', 'jshint']);
     grunt.registerTask('test', 'Run the unit tests.', ['lint', 'preprocess:dist', 'jasmine:dist', 'clean:tmp']);
    /* grunt.registerTask('dev', 'Auto-test while developing.', ['watch:dist']); */
-    grunt.registerTask('nodebuild', 'Build our library with jasmine node test.', ['replace', 'lint', 'clean', 'preprocess:dist', 'jasmine_node', 'concat', 'min', 'clean:tmp']);
-    grunt.registerTask('build', 'Build our library.', ['replace', 'lint', 'clean', 'preprocess:dist', 'jasmine:dist', 'concat', 'min', 'clean:tmp']);
-    grunt.registerTask('quickbuild', 'Build our library without time consuming jasmine tests and minifying.', ['replace', 'lint', 'clean', 'preprocess:debug', 'concat', 'clean:tmp']);
+    grunt.registerTask('nodebuild', 'Build our library with jasmine node test.', ['replace', 'lint', 'clean', 'preprocess:dist', 'jasmine_node', 'concat', 'min', 'clean:tmp', 'notify:success']);
+    grunt.registerTask('build', 'Build our library.', ['replace', 'lint', 'clean', 'preprocess:dist', 'jasmine:dist', 'concat', 'min', 'clean:tmp', 'notify:success']);
+    grunt.registerTask('quickbuild', 'Build our library without time consuming jasmine tests and minifying.', ['replace', 'lint', 'clean', 'preprocess:debug', 'concat', 'clean:tmp', 'notify:success']);
 };

@@ -7,14 +7,12 @@ describe("==========Tests of basic tools========", function() {
 		var s = "abcdefg", a = [] ;
 		var res = ['0', '1', '2', '3', '4', '5', '6'] ;
 		
-		if (typeof module !== 'undefined' && module.exports) {  // On Node.js
-			res.push('to') ;
-			res.push('toEnd') ;
-		}
-		
 		for (var key in s) {
-			a.push(key) ;
+            if (s.hasOwnProperty(key)) {        // in case node.js environment adds to String
+                a.push(key) ;
+            }
 		}
+
 		expect(MSTools.stringify(a)).toBe(MSTools.stringify(res)) ;
 	}) ;
 	it("Testing CRC32", function() {
