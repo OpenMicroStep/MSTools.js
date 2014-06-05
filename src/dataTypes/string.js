@@ -111,28 +111,9 @@ MSTools.defineInstanceMethods(String, {
     toJSON: function (key) { return this.valueOf(); },
     toColor: function() { return new MSColor(this) ; },
     toData: function() { return new MSData(this) ; },
-    toUTF8Data: function() {
-        var len = this.length  ;
-        if (len) {
-            var i, c, array = new MSData(/*len?*/) ;
-            for (i = 0 ; i < len ; i++) {
-                c = this.charCodeAt(i) ;
-                if (c < 128) {
-                    array.push(c) ;
-                }
-                else if (c < 2048) {
-                    array.push((c >> 6) | 192) ;
-                    array.push((c & 63) | 128) ;
-                }
-                else {
-                    array.push((c >> 12) | 224) ;
-                    array.push(((c >> 6) & 63) | 128) ;
-                    array.push((c & 63) | 128) ;
-                }
-            }
-            return array ;
-        }
-        return MSData.EMPTY_DATA ;
+    toASCII: function(replacementChar) {
+        var map = String.__toASCIIMap, c = ($ok(replacementChar) ? ''+replacementChar : '') ;
+        return this.replace(/[^\u0000-\u007F]/g, function(x) { return map[x] || c ;}) ;
     },
     trim: function() { return this.replace(/^\s*(\S*(\s+\S+)*)\s*$/, "$1"); },
     contains: function(searchedString, fromIndex) { return this.indexOf(searchedString, fromIndex) === -1 ? false : true ; }
@@ -164,6 +145,34 @@ MSTools.defineInstanceMethods(String, {
     },
     // the toArray() method is inherited from Object. That means "aString" is transformed to ["aString"]. Should'nt we do something else ?
     byteAtIndex: function(i) { return this.charCodeAt(i) & 0xff; },
+    toISOLatin1Data: function(replacementChar) {
+        var map = String.__toASCIIMap, c = ($ok(replacementChar) ? ''+replacementChar : '') ;
+        var tmp =  this.replace(/[^\u0000-\u00FF]/g, function(x) { return map[x] || c ;}) ;
+        return new MSData(tmp) ;
+    },
+    toUTF8Data: function() {
+        var len = this.length  ;
+        if (len) {
+            var i, c, array = new MSData() ;
+            for (i = 0 ; i < len ; i++) {
+                c = this.charCodeAt(i) ;
+                if (c < 128) {
+                    array.push(c) ;
+                }
+                else if (c < 2048) {
+                    array.push((c >> 6) | 192) ;
+                    array.push((c & 63) | 128) ;
+                }
+                else {
+                    array.push((c >> 12) | 224) ;
+                    array.push(((c >> 6) & 63) | 128) ;
+                    array.push((c & 63) | 128) ;
+                }
+            }
+            return array ;
+        }
+        return MSData.EMPTY_DATA ;
+    },
     toMSTE:function(encoder) {
         if (this.length === 0) { encoder.push(3) ; }
         else {
@@ -180,9 +189,7 @@ MSTools.defineInstanceMethods(String, {
     }
 }, true) ;
 
-if (typeof String.prototype.toASCII !== 'function') {
-
-    MSTools.defineHiddenConstant(String, '__toASCIIMap', {
+MSTools.defineHiddenConstant(String, '__toASCIIMap', {
 
         // Iso Latin 1
         "\u00A0":" ",
@@ -2513,14 +2520,5 @@ if (typeof String.prototype.toASCII !== 'function') {
         "\uFFE5":"Y",
         "\uFFE6":"W",
         "\uFFE8":"|"
-    }, true) ;
+}, true) ;
 
-    // if replacementChar is not set, all unmatched characters are removed
-    // so we can be sure that our final string is strictly ASCII (0x00-0x7f characters)
-    // TODO: may be we can faster this conversion with character by character anlysis and array push() and join()
-
-    MSTools.defineInstanceMethod(String, 'toASCII', function(replacementChar) {
-        var map = String.__toASCIIMap, c = ($ok(replacementChar) ? ''+replacementChar : '') ;
-        return this.replace(/[^\u0000-\u007F]/g, function(x) { return map[x] || c ;}) ;
-    }, true) ;
-}
