@@ -58,7 +58,7 @@ describe("==========Tests of data  ========", function() {
 
 	it("Testing base64 decode/encode on short string", function() {
 		var s = "Rjd5NA==" ;
-		var d = MSData.initWithBase64String(s) ;
+		var d = MSData.dataWithBase64String(s) ;
 
 		expect(d.toString()).toBe("F7y4") ;
 
@@ -75,7 +75,7 @@ describe("==========Tests of data  ========", function() {
 	it("Testing base64 decoding (1)", function() {
 		var s = "VGhlIEJ5dGVBcnJheSBjbGFzcyB3YXMgcHJpbWFyaWx5IGRlc2lnbmVkIHRvIHdvcmsgd2l0aCBBU1AgYW5kIFZCU2NyaXB0LCBidXQgeW91IGNhbiB1c2UgaXQgd2l0aCBhbnkgb3RoZXIgbGFuZ3VhZ2Ugd29ya2luZyB3aXRoIENPTSAoQWN0aXZlWCwgT0xFKSBvYmplY3RzLCBzdWNoIGlzIFZCQSAoVkJBNSwgVkJBNiwgV29yZCwgRXhjZWwsIE1TIEFjY2VzcyksIFZCU2NyaXB0IGFuZCBKU2NyaXB0IGluIHdpbmRvd3Mgc2NyaXB0aW5nIGhvc3QgKC53c2gsIC5jaG0gb3IgLmh0YSBhcHBsaWNhdGlvbnMsIE91dGxvb2sgb3IgZWNoYW5nZSBzZXJ2ZXItc2lkZSBzY3JpcHRzKSwgVkIuTmV0LCBDIyBvciBqIyBpbiBBU1AuTmV0IGFuZCBvdGhlcnMu" ;
 		
-		var d = MSData.initWithBase64String(s) ;
+		var d = MSData.dataWithBase64String(s) ;
 		var r = "The ByteArray class was primarily designed to work with ASP and VBScript, but you can use it with any other language working with COM (ActiveX, OLE) objects, such is VBA (VBA5, VBA6, Word, Excel, MS Access), VBScript and JScript in windows scripting host (.wsh, .chm or .hta applications, Outlook or echange server-side scripts), VB.Net, C# or j# in ASP.Net and others." ;
 
 		
@@ -91,7 +91,7 @@ describe("==========Tests of data  ========", function() {
 		"bnMsIE91dGxvb2sgb3IgZWNoYW5nZSBzZXJ2ZXItc2lkZSBzY3JpcHRzKSwgVkIuTmV0LCBDIyBv\n"+
 		"ciBqIyBpbiBBU1AuTmV0IGFuZCBvdGhlcnMu" ;
 		
-		var d = MSData.initWithBase64String(s) ;
+		var d = MSData.dataWithBase64String(s) ;
 		var r = "The ByteArray class was primarily designed to work with ASP and VBScript, but you can use it with any other language working with COM (ActiveX, OLE) objects, such is VBA (VBA5, VBA6, Word, Excel, MS Access), VBScript and JScript in windows scripting host (.wsh, .chm or .hta applications, Outlook or echange server-side scripts), VB.Net, C# or j# in ASP.Net and others." ;
 
 		expect(d.toString()).toBe(r) ;

@@ -293,7 +293,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                     break ;
 
                 case 107: // data reading
-                    value = MSData.initWithBase64String(a[i++]) ;
+                    value = MSData.dataWithBase64String(a[i++]) ;
                     hasValue = true ;
                     //console.log("Registering new data '"+value+"' as "+this.objects.length+"nth object") ;
                     this.objects.push(value) ;
@@ -328,7 +328,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                     if (value >= Date.DISTANT_FUTURE_TS) { value = Date.DISTANT_FUTURE_TS ; }
                     else if ( value <= Date.DISTANT_PAST_TS) { value = Date.DISTANT_PAST_TS ; }
 
-                    value = Date.initWithUTCTime(value) ;
+                    value = Date.dateWithUTCTime(value) ;
                     //console.log("Registering new timestamp '"+value+"' as "+this.objects.length+"nth object") ;
                     this.objects.push(value) ;
                     hasValue = true ;

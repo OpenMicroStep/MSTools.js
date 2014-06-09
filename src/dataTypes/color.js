@@ -111,7 +111,7 @@ MSTools.defineHiddenConstant(MSColor.prototype,'isa', 'Color', true) ;
 MSTools.defineMethods(MSColor, {
     lighter: function(X) { X /= 255.0 ; return Math.round((2.0*(X)*(X)/3.0+(X)/2.0+0.25)*255) ; },
     darker: function(X) { X /= 255.0 ; return Math.round((-(X)*(X)/3+5.0*(X)/6.0)*255) ; },
-    initWithHSB: function(hue, saturation, brightness) {
+    colorWithHSB: function(hue, saturation, brightness) {
         if (typeof hue === "object" && "h" in hue && "s" in hue && "b" in hue) {
             brightness = hue.b;
             saturation = hue.s;

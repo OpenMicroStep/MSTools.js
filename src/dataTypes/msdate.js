@@ -114,7 +114,7 @@ MSTools.defineMethods(MSDate, {
         }
         return ret ;
     },
-    initWithInt:function(decimalDate) {
+    dateWithInt:function(decimalDate) {
         if ($ok(decimalDate)) {
             decimalDate = decimalDate.toInt() ;
             var day = decimalDate % 100 ;

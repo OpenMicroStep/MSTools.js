@@ -904,7 +904,7 @@ describe("==========Tests du package string========", function() {
 		var s, d, i = us.indexOf("0160") ;
 		expect(us.charAt(i+5)).toBe('\u0160') ; // testing the fact that source code is in UTF8
 		d = us.toUTF8Data() ;
-		s = String.initWithUTF8Data(d) ;
+		s = String.stringWithUTF8Data(d) ;
 		expect(s).toBe(us) ; // testing encoding / decoding UTF8
 	});
 	

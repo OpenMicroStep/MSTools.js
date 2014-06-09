@@ -90,14 +90,13 @@ describe("==========Tests du package date========", function() {
 	it("Testing decimal Date value", function() {
 		expect(new Date(1966,3,13).toUInt()).toBe(19660413) ;
 		expect(new Date(1970,0,1).toUInt()).toBe(19700101) ;
-		expect(Date.initWithUTCTime(0).toUInt()).toBe(19700101) ;
+		expect(Date.dateWithUTCTime(0).toUInt()).toBe(19700101) ;
 		expect(new Date(2002,6,6).toUInt()).toBe(20020706) ;
 	}) ;
-	/*it("Testing decimal MDDate value", function() {
+	it("Testing decimal MDDate value", function() {
 		expect(new MSDate(1966,4,13).toUInt()).toBe(19660413) ;
 		expect(new MSDate(1970,1,1).toUInt()).toBe(19700101) ;
 		expect(new MSDate(0).toUInt()).toBe(20010101) ;
 		expect(new MSDate(2002,07,06).toUInt()).toBe(20020706) ;
 	}) ;
-	*/
 }) ;

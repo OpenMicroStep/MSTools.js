@@ -71,7 +71,7 @@ MSTools.defineHiddenConstants(MSData, {
 
 // ================= class methods ===============
 MSTools.defineMethods(MSData, {
-    initWithBase64String: function(s, index, paddingChar) {
+    dataWithBase64String: function(s, index, paddingChar) {
         var result = null ;
         if ((typeof s) === 'string') {
             var len = s.length ;

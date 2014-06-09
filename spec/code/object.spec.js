@@ -14,11 +14,11 @@ describe("==========Tests object add-ons========", function() {
 
 	it ("Testing $equals()", function() {
 		var a,b, c = null, d = null, e = {}, f = {} ;
-		var dt = new Date(2012,10,21), dt2 = Date.initWithInt(20121121) ;
+		var dt = new Date(2012,10,21), dt2 = Date.dateWithInt(20121121) ;
 		var s = "MyGoodness", s2 = "My"+"Good"+"ness" ;
 		var data = "F7y4".toUTF8Data() ;
 		var data2 = new MSData("F7y4") ;
-		var data3 = MSData.initWithBase64String("Rjd5NA==") ;
+		var data3 = MSData.dataWithBase64String("Rjd5NA==") ;
 		var o = {}, o2 = o ;
 		var c1 = new MSColor("fuchsia"), c2 = new MSColor("magenta"), c3 = new MSColor( "#ff00ff"), c4 = new MSColor(0xff,0,0xff) ;
 		expect($equals(false, false)).toBe(true) ;

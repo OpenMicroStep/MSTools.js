@@ -15,15 +15,15 @@ MSTools.defineConstants(Date,{
 MSTools.defineMethods(Date, {
     currentMonth:function() { return new Date().getMonth() ; },
     currentYear:function() { return new Date().getFullYear() ; },
-    initWithUTCTime:function(utc) {
+    dateWithUTCTime:function(utc) {
         var d, t ;
         d = new Date(utc) ;
         t = d.getTimezoneOffset() ;
         if (t !== 0) { d.setTime(utc+t*60000) ; }
         return d ;
     },
-    initWithUTCSeconds:function(utc) { return this.initWithUTCTime(1000*utc) ; },
-    initWithInt:function(decimalDate) {
+    dateWithUTCSeconds:function(utc) { return this.dateWithUTCTime(1000*utc) ; },
+    dateWithInt:function(decimalDate) {
         if ($ok(decimalDate)) {
             decimalDate = decimalDate.toInt() ;
             var day = decimalDate % 100 ;
@@ -41,7 +41,7 @@ MSTools.defineMethods(Date, {
 MSTools.defineInstanceMethods(Date, {
     getUTCFullSeconds: function() { return $div(this.getTime(), 1000) - this.getTimezoneOffset()*60 ; },
     getUTCFullTime: function() { return this.getTime() - this.getTimezoneOffset()*60000 ; },
-    dateWithoutTime: function() { var utc = this.getUTCFullTime() ; return Date.initWithUTCTime(utc - (utc % 86400000)) ; },
+    dateWithoutTime: function() { var utc = this.getUTCFullTime() ; return Date.dateWithUTCTime(utc - (utc % 86400000)) ; },
     isLeap: function() { return MSDate.isLeapYear(this.getFullYear()) ; },
     shiftSeconds: function(s) { this.setTime(this.getTime()+s*1000) ; },
     weekOfYear: function(offset) {
