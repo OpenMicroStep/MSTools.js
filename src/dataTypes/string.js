@@ -129,12 +129,12 @@ MSTools.defineInstanceMethods(String, {
     contains: function(searchedString, fromIndex) { return this.indexOf(searchedString, fromIndex) === -1 ? false : true ; }
 }) ;
 
-if (Ext) {	
-	MSTools.defineInstanceMethods(String, {
-	    isEqualTo: function(other, options) { return this === other ? true : false ; },
-	    toArray: function() { return [this] ; },
-	    toUInt:function(base) { return this.toInt().toUInt() ; }
-	}) ;
+if (MSTools.degradedMode) {
+    MSTools.defineInstanceMethods(String, {
+        isEqualTo: function(other, options) { return this === other ? true : false ; },
+        toArray: function() { return [this] ; },
+        toUInt:function(base) { return this.toInt().toUInt() ; }
+    }) ;
 }
 
 MSTools.defineInstanceMethods(String, {

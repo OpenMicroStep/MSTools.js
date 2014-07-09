@@ -25,6 +25,7 @@
         "MSData": true,
         "MSNaturalArray": true,
         "MSCouple": true,
-        "GLOBAL": true          // Node.js global obj
+        "GLOBAL": true,         // Node.js global obj
+        "Ext": true
     }
 }

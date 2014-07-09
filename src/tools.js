@@ -65,3 +65,5 @@ MSTools.crc32 = function(self, byteAtIndexFn) {
     return (crc ^ -1) >>> 0 ;
 } ;
 
+MSTools.degradedMode = (typeof Ext !== "undefined");
+

@@ -10,8 +10,9 @@ function $equals(a, b, opts) { return $ok(a) ? ($ok(b) ? a.isEqualTo(b, opts) : 
 var MSTools = (function(global) {
     "use strict";
 
-    // Define and export the Marionette namespace
-    var MSTools = {};
+    var MSTools = {
+
+    };
 
     // @include ./tools.js
     // @include ./introspection.js
