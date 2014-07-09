@@ -117,3 +117,9 @@ MSTools.defineInstanceMethods(Date, {
         }
     }
 }, true) ;
+
+if (Ext) {	
+	MSTools.defineInstanceMethods(Date, {
+	    toArray: function() { return [this] ; }
+	}) ;
+}

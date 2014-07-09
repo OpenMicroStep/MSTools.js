@@ -18,3 +18,9 @@ MSTools.defineInstanceMethods(Boolean, {
 MSTools.defineInstanceMethods(Boolean, {
     toMSTE: function(encoder) { encoder.push(this ? 1 : 2 ) ; }
 }, true) ;
+
+if (Ext) {	
+	MSTools.defineInstanceMethods(String, {
+	    toArray: function() { return [this] ; }
+	}) ;
+}

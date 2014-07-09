@@ -179,7 +179,7 @@ MSTools.defineInstanceMethods(MSColor, {
 }, true) ;
 
 MSTools.defineInstanceMethods(MSColor,{
-    toUInt:MSColor.prototype.toNumber,
-    valueOf:MSColor.prototype.toNumber
+    toUInt: MSColor.prototype.toNumber,
+    valueOf: MSColor.prototype.toNumber
 }, true) ;
 

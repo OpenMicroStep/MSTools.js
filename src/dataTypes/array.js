@@ -107,3 +107,10 @@ MSTools.defineInstanceMethods(Array, {
         }
     }
 }, true) ;
+
+if (Ext) {	
+	MSTools.defineInstanceMethods(Array, {
+	    toInt:function() { return this.toNumber().toInt() ; },
+	    toUInt:function(base) { return this.toInt().toUInt() ; }
+	}) ;
+}

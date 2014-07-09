@@ -64,3 +64,10 @@ MSTools.defineInstanceMethods(Number, {
         }
     }
 }, true) ;
+
+if (Ext) {	
+	MSTools.defineInstanceMethods(Number, {
+	    isEqualTo: function(other, options) { return this === other ? true : false ; },
+	    toArray: function() { return [this] ; }
+	}) ;
+}

@@ -7,3 +7,12 @@ MSTools.defineHiddenConstant(Function.prototype, 'isa', 'Function', true) ;
 MSTools.defineInstanceMethods(Function, {
     toMSTE: function(encoder) { encoder.encodeException(this) ; }
 }, true) ;
+
+if (Ext) {	
+	MSTools.defineInstanceMethods(String, {
+	    isEqualTo: function(other, options) { return this === other ? true : false ; },
+	    toArray: function() { return [this] ; },
+	    toInt:function() { return this.toNumber().toInt() ; },
+	    toUInt:function(base) { return this.toInt().toUInt() ; }
+	}) ;
+}

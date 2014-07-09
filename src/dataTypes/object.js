@@ -10,14 +10,16 @@ MSTools.defineMethods(Object,{
 }) ;
 
 // ================  instance methods =============
-MSTools.defineInstanceMethods(Object, {
-    isEqualTo: function(other, options) { return this === other ? true : false ; }
-}) ;
 
-MSTools.defineInstanceMethods(Object, {
-    className:function() { return $length(this.isa) ? this.isa : (typeof this) ; },
-    valueForPath:function(path) { return MSTools.valueForPath(this, path) ; },
-    toInt:function() { return this.toNumber().toInt() ; },
-    toArray: function() { return [this] ; },
-    toUInt:function(base) { return this.toInt().toUInt() ; }
-}, true) ;
+if (!Ext) {	
+	// if you want use valueForPath() on objects with Ext.js, try MStools.valueForPath() function
+	MSTools.defineInstanceMethods(Object, {
+	    isEqualTo: function(other, options) { return this === other ? true : false ; }
+	}) ;
+	MSTools.defineInstanceMethods(Object, {
+	    valueForPath:function(path) { return MSTools.valueForPath(this, path) ; },
+	    toInt:function() { return this.toNumber().toInt() ; },
+	    toArray: function() { return [this] ; },
+	    toUInt:function(base) { return this.toInt().toUInt() ; }
+	}, true) ;
+}
