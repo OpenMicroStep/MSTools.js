@@ -72,7 +72,8 @@ MSTools.defineHiddenConstants(String, {
             regex: /^(\d{1,2})\s*(h|H)?$/,
             maker: function(a,cfn) { return cfn(a[1].toInt(), 0) ;}
         }
-    ]
+    ],
+    __wordSeparatorRegex:/[\s!\"#%&\'()*+,-.\/:;<=>?@\[\\\]_`{|}¡¦§\u00AB\u00AD´¶·\u00BB¿×÷ʹʺʻʼʽˈˌːˑ˸;·՚՛՜՝՞՟։׀׃׆׳״\u2000-\u206F]+/
 }, true) ;
 
 // ================= class methods ===============
@@ -126,6 +127,11 @@ MSTools.defineInstanceMethods(String, {
         return this.replace(/[^\u0000-\u007F]/g, function(x) { return map[x] || c ;}) ;
     },
     trim: function() { return this.replace(/^\s*(\S*(\s+\S+)*)\s*$/, "$1"); },
+    wordsArray: function(regex) {
+        var a = this.trim().split(regex || String.__wordSeparatorRegex), i = a.length ;
+        while (i-- > 0) { if (a[i].length === 0) { a.splice(i,1) ; }}
+        return a ;
+    },
     contains: function(searchedString, fromIndex) { return this.indexOf(searchedString, fromIndex) === -1 ? false : true ; }
 }) ;
 
