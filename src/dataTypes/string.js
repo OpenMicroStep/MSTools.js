@@ -199,20 +199,13 @@ MSTools.defineInstanceMethods(String, {
         }
         return MSData.EMPTY_DATA ;
     },
+    // encoding numbers with adding properties is not longer possible
+    // because adding properties to numbers is forbidden on some browsers
     toMSTE:function(encoder) {
         if (this.length === 0) { encoder.push(3) ; }
-        else {
-            var identifier = this[encoder.referenceKey] ;
-            if ($ok(identifier)) { encoder.push(9) ; encoder.push(identifier) ; }
-            else {
-                identifier = encoder.encodedObjects.length ;
-                this[encoder.referenceKey] = identifier ; // Object.defineProperty does not work on strings
-                encoder.encodedObjects[identifier] = this ;
-                encoder.push(21) ;
-                encoder.push(this) ;
-            }
-        }
-    }
+        else { encoder.pushString(this) ; } // only push non empty strings on encoders...
+    },
+    hashCode:function() { return this.split("").reduce(function(a,b) { a = ((a<<5)-a)+b.charCodeAt(0); return a&a ; }, 0); }
 }, true) ;
 
 MSTools.defineHiddenConstants(String, {

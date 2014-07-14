@@ -94,6 +94,7 @@ MSTools.defineInstanceMethods(Array, {
     firstObject:function() { return this.length ? this[0] : null ; },
     lastObject:function() { return this.length ? this[this.length - 1] : null ;},
     objectAtIndex:function(i) { return this[i] ; }
+    // TODO : a reduce function for old browsers ?
 }) ;
 
 MSTools.defineInstanceMethods(Array, {

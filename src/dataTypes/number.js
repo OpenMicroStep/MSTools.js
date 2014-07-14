@@ -47,17 +47,11 @@ MSTools.defineInstanceMethods(Number, {
 }) ;
 
 MSTools.defineInstanceMethods(Number, {
+    // encoding numbers with adding properties is not longer possible
+    // because adding properties to numbers is forbidden on some browsers
     toMSTE: function(encoder) {
         if (isFinite(this) && !isNaN(this)) {
-            var identifier = this[encoder.referenceKey] ;
-            if ($ok(identifier)) { encoder.push(9) ; encoder.push(identifier) ; }
-            else {
-                identifier = encoder.encodedObjects.length ;
-                this[encoder.referenceKey] = identifier ; // Object.defineProperty does not work on numbers
-                encoder.encodedObjects[identifier] = this ;
-                encoder.push(20) ;
-                encoder.push(this) ;
-            }
+            encoder.pushNumber(this) ;
         }
         else {
             throw "Impossible to MSTE encode an infinite number" ;

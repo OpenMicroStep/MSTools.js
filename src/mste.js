@@ -403,6 +403,8 @@ MSTools.MSTE.Encoder = function() {
     this.keysIndexes = {} ;
     this.classesNames = [] ;
     this.classesIndexes = {} ;
+    this.stringsIndexes = {} ;
+    this.numbersIndexes = {} ;
     this.isa = 'MSTECoder' ;
 } ;
 
@@ -445,15 +447,60 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Encoder,
         }
         this.stream.push(50 + index) ;
     },
+    pushNumber: function(aNumber) {
+        var key = aNumber.toString(32) ; // yeah, less chars with 32 digits
+        var index = this.numbersIndexes[key] ;
+        if ($ok(index)) {
+            this.stream.push(9) ;
+            this.stream.push(index) ;
+        }
+        else {
+            index = this.encodedObjects.length ;
+            this.numbersIndexes[key] = index ;
+            this.encodedObjects[index] = null ; // we don't want to remove a non existant property at the end
+            this.stream.push(20) ;
+            this.stream.push(aNumber) ;
+        }
+    },
+    pushString: function(aString) {
+        var key = aString.length < 64 ? aString : ("0000000" + (aString.hashCode() >>> 0).toString(16)).substr(-8) ;
+        var index, array = this.stringsIndexes[key] ;
+        if ($ok(array)) {
+            var count = array.length, i ;
+            for (i = 0 ; i < count ; i++) {
+                if (aString === array[i].string) { break ; }
+            }
+            if (i < count) {
+                this.stream.push(9) ;
+                this.stream.push(array[i].index) ;
+            }
+            else {
+                index = this.encodedObjects.length ;
+                array.push({string:aString, index:index}) ;
+                this.encodedObjects[index] = null ; // we don't want to remove a non existant property at the end
+                this.stream.push(21) ;
+                this.stream.push(aString) ;
+            }
+        }
+        else {
+            index = this.encodedObjects.length ;
+            this.stringsIndexes[key] = [{string:aString, index:index}] ;
+            this.encodedObjects[index] = null ; // we don't want to remove a non existant property at the end
+            this.stream.push(21) ;
+            this.stream.push(aString) ;
+        }
+    },
     encodeObject:function(o) {
         if ($ok(o)) {
             if (typeof o.toMSTE === 'function') {
-                // //console.log('will encode object of class '+o.isa+' with its internal function') ;
+                //console.log('encodeObject:'+o.isa) ;
+                //console.log('--> has MSTE function') ;
                 o.toMSTE(this) ;
             }
             else if (this.shouldPushObject(o)) {
                 var i, count, keys = null, idx, k, v, t, total = 0, customClass = null ;
 
+                //console.log('--> pushed on stack') ;
                 if (typeof o.toMSTEClass === 'function') {
                     customClass = o.toMSTEClass() ;
                     if (typeof customClass === "string" && customClass.length) {
@@ -520,7 +567,12 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Encoder,
     },
     deleteTemporaryIdentifiers:function() {
         var i, a = this.encodedObjects, count = a.length, elem, k = this.referenceKey ;
-        for (i = 0 ; i < count ; i++) { elem = a[i] ; delete elem[k] ; }
+        for (i = 0 ; i < count ; i++) {
+            elem = a[i] ;
+            if (elem !== null) { delete elem[k] ; }
+        }
+        this.stringsIndexes = {} ;
+        this.numbersIndexes = {} ;
     },
     encodeException:function(o) { throw "Impossible to encode object of class "+this.className() ; },
     toMSTE:function(encoder) { encoder.encodeException(this) ; }
@@ -550,7 +602,7 @@ MSTools.MSTE.tokenize = function(rootObject) {
     }
     catch (e) {
         encoder.deleteTemporaryIdentifiers() ;
-        //console.log("error \""+e+"\" encountered during MSTE tokenizing") ;
+        console.log("error \""+e+"\" encountered during MSTE tokenizing") ;
         r = null ;
     }
 
@@ -562,10 +614,10 @@ MSTools.MSTE.stringify = function(rootObject) {
     if (r) {
         try {
             r = MSTools.stringify(r) ; // a lightly modified version of crockford stringify implementation
-            // TODO: calculate the CRC after the stringify has been done
+            // TODO: calculate the CRC after the stringify has been done or maybe remove the CRC once for all...
         }
         catch (e) {
-            //console.log("error "+e+" during MSTE stringify") ;
+            console.log("error "+e+" during MSTE stringify") ;
             r = null ;
         }
     }

@@ -174,5 +174,14 @@ MSTools.defineInstanceMethods(MSData, {
             encoder.push(25) ;
             encoder.push(this.toBase64String()) ;
         }
+    },
+    hashCode: function() {
+        // we use the same hash than strings
+        var i, hash = 0, count = this.length ;
+        for (i = 0; i < count; i++) {
+            hash  = ((hash << 5) - hash) + this.byteAtIndex(i) ;
+            hash = hash & hash; // Convert to 32bit integer
+        }
+        return hash;
     }
 }, true) ;
