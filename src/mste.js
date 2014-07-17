@@ -213,6 +213,10 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                             hasValue = true ;
                             state = -1 ;
                         }
+
+                        // Should fix bug where regular Dictionaries were treated as Custom Vars
+                        FutureConstructor = null ;
+
                     }
                     break ;
 
