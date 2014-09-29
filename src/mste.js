@@ -523,7 +523,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Encoder,
                         k = keys[i] ; v = o[k] ; t = typeof v ;
                         if (v === null) {
                             total ++ ;
-                            this.stream.push(30) ;
+                            this.stream.push(0) ;
                         }
                         else if (t !== 'function' && t !== 'undefined') {
                             total ++ ;
@@ -540,7 +540,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Encoder,
                             v = o[k] ; t = typeof v ;
                             if (v === null) {
                                 total ++ ;
-                                this.stream.push(30) ;
+                                this.stream.push(0) ;
                             }
                             else if (t !== 'function' && t !== 'undefined') {
                                 total ++ ;
