@@ -521,7 +521,11 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Encoder,
                     // specific mste loop
                     for (i = 0 ; i < count ; i++) {
                         k = keys[i] ; v = o[k] ; t = typeof v ;
-                        if (v !== null && t !== 'function' && t !== 'undefined') {
+                        if (v === null) {
+                            total ++ ;
+                            this.stream.push(30) ;
+                        }
+                        else if (t !== 'function' && t !== 'undefined') {
                             total ++ ;
                             this.pushKey(k) ;
                             this.encodeObject(v) ;
@@ -534,7 +538,11 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Encoder,
                     for (k in o) {
                         if (k.length && k.charAt(0) >= 'A') {
                             v = o[k] ; t = typeof v ;
-                            if (v !== null && t !== 'function' && t !== 'undefined') {
+                            if (v === null) {
+                                total ++ ;
+                                this.stream.push(30) ;
+                            }
+                            else if (t !== 'function' && t !== 'undefined') {
                                 total ++ ;
                                 this.pushKey(k) ;
                                 this.encodeObject(v) ;
