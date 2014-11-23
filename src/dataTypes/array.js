@@ -1,8 +1,7 @@
 // ================ constants ====================
 MSTools.defineHiddenConstants(Array.prototype, {
     isa:'Array',
-    isArray:true,
-    MSTECode:31
+    isArray:true
 }, true) ;
 
 // ================= class methods ===============
@@ -102,16 +101,17 @@ MSTools.defineInstanceMethods(Array, {
     toMSTE: function(encoder) {
         if (encoder.shouldPushObject(this)) {
             var i, count = this.length ;
-            encoder.push(this.MSTECode) ;
+            encoder.push(encoder.version > 0x0101 ? 31 : 20) ;
             encoder.push(count) ;
             for (i = 0 ; i < count ; i++) { encoder.encodeObject(this.objectAtIndex(i)) ; }
         }
-    }
+    },
+    toInt:function() { return NaN ; },
+    toUInt:function(base) { return NaN ; }
 }, true) ;
 
 if (MSTools.degradedMode) {
     MSTools.defineInstanceMethods(Array, {
-        toInt:function() { return this.toNumber().toInt() ; },
-        toUInt:function(base) { return this.toInt().toUInt() ; }
+        toNumber:function() { return NaN ; }
     }) ;
 }

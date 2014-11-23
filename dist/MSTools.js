@@ -149,6 +149,7 @@
         }) ;
         MSTools.defineInstanceMethods(Object, {
             valueForPath:function(path) { return MSTools.valueForPath(this, path) ; },
+            toNumber:function() { return NaN ; },
             toInt:function() { return this.toNumber().toInt() ; },
             toArray: function() { return [this] ; },
             toUInt:function(base) { return this.toInt().toUInt() ; }
@@ -176,6 +177,7 @@
             }
             return s ;
         },
+        toNumber:function() { return this ; },
         toInt:function() {
             if (isFinite(this) && !isNaN(this)) {
                 if ((this >= -2147483648) && (this <= 2147483647)) { return this | 0 ; }
@@ -231,6 +233,7 @@
     
     // ================  instance methods =============
     MSTools.defineInstanceMethods(Boolean, {
+        toNumber:function() { return this ? 1 : 0 ; },
         toInt: function() { return this ? 1 : 0 ; },
         toUInt: function() { return this ? 1 : 0 ; },
         isEqualTo: function(other, options) {
@@ -241,7 +244,7 @@
     }) ;
     
     MSTools.defineInstanceMethods(Boolean, {
-        toMSTE: function(encoder) { encoder.push(this ? 1 : 2 ) ; }
+        toMSTE: function(encoder) { encoder.push(this ? 1 : 2 ) ; } // idem in 101 and 102 version
     }, true) ;
     
     if (MSTools.degradedMode) {
@@ -370,6 +373,7 @@
     MSTools.defineInstanceMethods(String, {
         hasSuffix: function(str) { var r = new RegExp(str+"$") ; return (this.match(r) != null) ; },
         hasPrefix: function(str) { var r = new RegExp("^"+str) ; return (this.match(r) != null) ; },
+        toNumber:function() { return Number(this) ; },
         toInt: function(base) { base = base || 10 ; var v = parseInt(this, base) ; return (isNaN(v) ? 0 : v) ;},
         toJSON: function (key) { return this.valueOf(); },
         toColor: function() { return new MSColor(this) ; },
@@ -459,10 +463,7 @@
         },
         // encoding numbers with adding properties is not longer possible
         // because adding properties to numbers is forbidden on some browsers
-        toMSTE:function(encoder) {
-            if (this.length === 0) { encoder.push(3) ; }
-            else { encoder.pushString(this) ; } // only push non empty strings on encoders...
-        },
+        toMSTE:function(encoder) { encoder.pushString(this) ; },
         hashCode:function() { return this.split("").reduce(function(a,b) { a = ((a<<5)-a)+b.charCodeAt(0); return a&a ; }, 0); }
     }, true) ;
     
@@ -2868,8 +2869,7 @@
     // ================ constants ====================
     MSTools.defineHiddenConstants(Array.prototype, {
         isa:'Array',
-        isArray:true,
-        MSTECode:31
+        isArray:true
     }, true) ;
     
     // ================= class methods ===============
@@ -2969,17 +2969,18 @@
         toMSTE: function(encoder) {
             if (encoder.shouldPushObject(this)) {
                 var i, count = this.length ;
-                encoder.push(this.MSTECode) ;
+                encoder.push(encoder.version > 0x0101 ? 31 : 20) ;
                 encoder.push(count) ;
                 for (i = 0 ; i < count ; i++) { encoder.encodeObject(this.objectAtIndex(i)) ; }
             }
-        }
+        },
+        toInt:function() { return NaN ; },
+        toUInt:function(base) { return NaN ; }
     }, true) ;
     
     if (MSTools.degradedMode) {
         MSTools.defineInstanceMethods(Array, {
-            toInt:function() { return this.toNumber().toInt() ; },
-            toUInt:function(base) { return this.toInt().toUInt() ; }
+            toNumber:function() { return NaN ; }
         }) ;
     }
     
@@ -2990,15 +2991,16 @@
     
     // ================  instance methods =============
     MSTools.defineInstanceMethods(Function, {
-        toMSTE: function(encoder) { encoder.encodeException(this) ; }
+        toMSTE: function(encoder) { encoder.encodeException(this) ; },
+        toNumber:function() { return NaN ; },
+        toInt:function() { return NaN ; },
+        toUInt:function(base) { return NaN ; }
     }, true) ;
     
     if (MSTools.degradedMode) {
         MSTools.defineInstanceMethods(String, {
             isEqualTo: function(other, options) { return this === other ? true : false ; },
-            toArray: function() { return [this] ; },
-            toInt:function() { return this.toNumber().toInt() ; },
-            toUInt:function(base) { return this.toInt().toUInt() ; }
+            toArray: function() { return [this] ; }
         }) ;
     }
     
@@ -3075,6 +3077,7 @@
             }
             return $ok(other) && this.isa === other.isa && this.getUTCFullTime() === other.getUTCFullTime() ? true : false ;
         },
+        toNumber:function() { return Number(this) ; },
         toInt: function() {
             var year = this.getFullYear(), month = this.getMonth()+1, day = this.getDate() ;
             return (year < 0 ? -1 : 1) * (year < 0 ? -year : year) * 10000 + month * 100 + day ;
@@ -3097,12 +3100,13 @@
     }) ;
     
     MSTools.defineInstanceMethods(Date, {
-        toMSTE: function(encoder) {
-            //console.log("UTC milliseconds of date "+this+" is "+t) ;
+        toMSDate: function() {
+            return new MSDate(this.getFullYear(), this.getMonth()+1, this.getDate(), this.getHours(), this.getMinutes(), this.getSeconds()) ;
+        },
+        MSTEEncodeFullTimeWithCode: function(encoder, t, code) {
             var identifier = this[encoder.referenceKey] ;
             if ($ok(identifier)) { encoder.push(9) ; encoder.push(identifier) ; }
             else {
-                var t = this.getUTCFullTime() ;
                 identifier = encoder.encodedObjects.length ;
                 Object.defineProperty(this, encoder.referenceKey, {
                     enumerable:false,
@@ -3111,10 +3115,18 @@
                     value:identifier
                 }) ;
                 encoder.encodedObjects[identifier] = this ;
-                encoder.push(23) ;
-                encoder.push(t/1000) ; // can be a double
-                //console.log('Date '+this+" will encode as "+(t/1000));
+                encoder.push(code) ;
+                encoder.push(t) ; // can be a double
             }
+        },
+        toMSTE: function(encoder) {
+            if (encoder.version === 0x0101) {
+                var t = this.getUTCFullSeconds() ;
+                if (t >= Date.DISTANT_FUTURE) { encoder.push(25) ; }
+                else if ( t <= Date.DISTANT_PAST_TS) { encoder.push(24) ; }
+                else { this.MSTEEncodeFullTimeWithCode(encoder, t, 6) ; }
+            }
+            else { this.MSTEEncodeFullTimeWithCode(encoder, this.getUTCFullTime()/1000, 23) ; }
         }
     }, true) ;
     
@@ -3345,18 +3357,28 @@
         },
         toDate: function() {
             var c = this.components() ;
-            return c !== null ? new Date(c.year, c.month - 1, c.day, c.hour, c.minute, c.second, 0) : null ;
+            return $ok(c) ? new Date(c.year, c.month - 1, c.day, c.hour, c.minute, c.seconds, 0) : null ;
         },
         toJSON: function (key) {
             var d = this.toDate() ;
-            return d !== null ? d.toJSON(key) : null ;
+            return $ok(d) ? d.toJSON(key) : null ;
         },
         toArray: function() {
             var c = this.components() ;
-            return c != null ? [c.year, c.month, c.day, c.hour, c.minute, c.seconds, c.dayOfWeek] : null ;
+            return $ok(c) ? [c.year, c.month, c.day, c.hour, c.minute, c.seconds, c.dayOfWeek] : null ;
         },
         toMSTE: function(encoder) {
-            if (encoder.shouldPushObject(this)) {
+            if (encoder.version === 0x0101) {
+                // in 101 MSTE version, there is no MSDate so we convert to a Date() object before encoding
+                var t = this.toDate().getUTCFullSeconds() ;
+                if (t >= Date.DISTANT_FUTURE) { encoder.push(25) ; }
+                else if (t <= Date.DISTANT_PAST_TS) { encoder.push(24) ; }
+                else if (encoder.shouldPushObject(this)) {
+                    encoder.push(6) ;
+                    encoder.push(t) ;
+                }
+            }
+            else if (encoder.shouldPushObject(this)) {
                 encoder.push(22) ;
                 encoder.push(this.interval + MSDate.SecsFrom19700101To20010101) ;
             }
@@ -3441,8 +3463,7 @@
     
     // ================ constants ====================
     MSTools.defineHiddenConstants(MSNaturalArray.prototype, {
-        isa:'Naturals',
-        MSTECode:26
+        isa:'Naturals'
     }, true) ;
     
     // ================= class methods ===============
@@ -3456,7 +3477,7 @@
         toMSTE: function(encoder) {
             if (encoder.shouldPushObject(this)) {
                 var i, count = this.length ;
-                encoder.push(this.MSTECode) ;
+                encoder.push(encoder.version > 0x0101 ? 26 : 21) ;
                 encoder.push(count) ;
                 for (i = 0 ; i < count ; i++) { encoder.push(this.objectAtIndex(i)) ; }
             }
@@ -3613,6 +3634,9 @@
             }
             return String.EMPTY_STRING ;
         },
+        toNumber:function() { return this.toString().toNumber() ; },
+        toInt:function() { return this.toNumber().toInt() ; },
+        toUInt:function(base) { return this.toInt().toUInt() ; },
         toBase64String: function(tokens, paddingChar) {
             var i, end, array, token ;
     
@@ -3649,7 +3673,7 @@
         toMSTE: function(encoder) {
             if (this.length === 0) { encoder.push(4) ; }
             else if (encoder.shouldPushObject(this)) {
-                encoder.push(25) ;
+                encoder.push(encoder.version > 0x0101 ? 25 : 23) ;
                 encoder.push(this.toBase64String()) ;
             }
         },
@@ -3838,7 +3862,7 @@
         toArray: function() { return [this.red, this.green, this.blue, this.alpha] ; },
         toMSTE: function(encoder) {
             if (encoder.shouldPushObject(this)) {
-                encoder.push(24) ;
+                encoder.push(encoder.version > 0x0101 ? 24 : 7) ;
                 encoder.push(this.toNumber()) ;
             }
         }
@@ -3872,11 +3896,13 @@
             if (this === other) { return true ; }
             return $ok(other) && this.isa === other.isa && $equals(this.firstMember, other.firstMember, options) && $equals(this.secondMember, other.secondMember, options)? true : false ;
         },
+        toInt:function() { return NaN ; },
+        toUInt:function(base) { return NaN ; },
         toArray: function() { return [this.firstMember, this.secondMember] ; },
         toMSTE: function(encoder) {
             if (encoder.shouldPushObject(this)) {
                 var v, i, count = this.length ;
-                encoder.push(32) ;
+                encoder.push(encoder.version > 0x0101 ? 32 : 22) ;
                 encoder.encodeObject(this.firstMember) ;
                 encoder.encodeObject(this.secondMember) ;
             }
@@ -3885,8 +3911,7 @@
     
     if (MSTools.degradedMode) {
         MSTools.defineInstanceMethods(Array, {
-            toInt:function() { return this.toNumber().toInt() ; },
-            toUInt:function(base) { return this.toInt().toUInt() ; }
+            toNumber:function() { return NaN ; }
         }) ;
     }
     
@@ -3901,7 +3926,7 @@
             {
                 states:[
                     0,        1,        2,        106,    106,
-                    106,    108,    109,    100,    9,
+                    106,    111,    109,    100,    9,
                     110,    110,    110,    110,    110,
                     110,    110,    110,    110,    110,
                     102,    103,    105,    107,    4,
@@ -3958,6 +3983,7 @@
         this.correspondances = null ;
         this.supportedVersions = [] ;
         this.root = null ;
+        this.printAutomat = false ;
     
         for (var i = 0 ; i < MSTools.MSTE.ENGINES.length ; i++) {
             this.supportedVersions.push(MSTools.MSTE.ENGINES[i].version) ;
@@ -3965,6 +3991,7 @@
         if ($ok(options)) {
             this.correspondances = options.classes ;
             this.checkCRC = !!options.crc;
+            this.printAutomat = options.debug ? true : false ;
         }
     } ;
     
@@ -3999,7 +4026,9 @@
     
             this.engine = MSTools.MSTE.ENGINES[v] ;
     
-            //console.log('version = MSTE'+this.engine.version.toHexa(4)) ;
+            if (this.printAutomat) {
+                console.log('version = MSTE'+this.engine.version.toHexa(4)) ;
+            }
     
             this.crc = a[2] ;
             if (this.checkCRC) {
@@ -4069,13 +4098,15 @@
             while (i < n) {
                 futureState = null ;
                 hasValue = false ;
-                //console.log('---- MSTE automat state : '+state+' stack depth : '+stack.length+'--------------------------') ;
-                //console.log('     index = '+i+', token ['+a[i]+']') ;
+                if (this.printAutomat) {
+                    console.log('---- MSTE automat state : '+state+' stack depth : '+stack.length+'--------------------------') ;
+                    console.log('     index = '+i+', token ['+a[i]+']') ;
+                }
                 switch(state) {
                     case -2: // token code reading after a dictionary key was read
                     case -1: // token code reading
                         if ($ok(currentState.nextState)) {
-                            //console.log('changing state from -1 to '+currentState.nextState) ;
+                            if (this.printAutomat) { console.log('changing state from -1 to '+currentState.nextState) ; }
                             state = currentState.nextState ;
                             currentState.nextState = null ;
                             continue ;
@@ -4091,17 +4122,17 @@
                             if (futureClass) {
                                 if (this.correspondances) { FutureConstructor = this.correspondances[futureClass] ; }
                             }
-                            //console.log('Found a class named <'+futureClass+'>') ;
+                            if (this.printAutomat) { console.log('Found a class named <'+futureClass+'>') ; }
                             state = 100 ;
                             // TODO using future constructor and future class
                             // with this linearized version it's highly complicated to change already referenced objects...
                         }
                         else {
-                            //console.log('     did read code '+code+' ('+engine.codeNames[code]+')') ;
+                            if (this.printAutomat) { console.log('     did read code '+code+' ('+engine.codeNames[code]+')') ; }
                             state = engine.states[code] ;
                             if (state >= 0 && state < clen) {
                                 value = constants[state] ;
-                                //console.log("constant["+state+"]=<"+value+">") ;
+                                if (this.printAutomat) { console.log("constant["+state+"]=<"+value+">") ; }
                                 hasValue = true ;
                                 state = -1 ;
                             }
@@ -4125,10 +4156,10 @@
                         count = a[i++] ;
                         if (typeof FutureConstructor === 'function') {
                             value = new FutureConstructor() ;
-                            //console.log("did define a new object of class "+ value.isa) ;
+                            if (this.printAutomat) { console.log("did define a new object of class "+ value.isa) ; }
                         }
                         else {
-                            //console.log("Registering new dictionary as "+this.objects.length+"nth object") ;
+                            if (this.printAutomat) { console.log("Registering new dictionary as "+this.objects.length+"nth object") ; }
                             value = {} ;
                         }
                         hasValue = true ;
@@ -4143,14 +4174,14 @@
     
                     case 101: // read dictionary key
                         currentState.k = this.keys[a[i++]] ; // the key is a string
-                        //console.log('     did read key \"'+currentState.k+'\"') ;
+                        if (this.printAutomat) { console.log('     did read key \"'+currentState.k+'\"') ; }
                         state = -2 ;
                         break ;
     
                     case 102: // array reading initialization
                         count = a[i++] ;
                         value = [] ;
-                        //console.log("Registering new Array as "+this.objects.length+"nth object") ;
+                        if (this.printAutomat) { console.log("Registering new Array as "+this.objects.length+"nth object") ; }
                         this.objects.push(value) ;
                         hasValue = true ;
                         if (count > 0) { futureState = {s:1, i:0, n:count, o:value} ; }
@@ -4160,7 +4191,7 @@
                     case 103: // naturals array reading initialization
                         count = a[i++] ;
                         value = new MSNaturalArray() ;
-                        //console.log("Registering new Natural Array as "+this.objects.length+"nth object") ;
+                        if (this.printAutomat) { console.log("Registering new Natural Array as "+this.objects.length+"nth object") ;}
                         this.objects.push(value) ;
                         hasValue = true ;
                         if (count > 0) {
@@ -4175,7 +4206,7 @@
                         currentState.i++ ;
                         if (currentState.i === currentState.n) {
                             stack.pop() ;
-                            //console.log('      <<<< did pop stack 104') ;
+                            if (this.printAutomat) { console.log('      <<<< did pop stack 104') ; }
                             currentState = stack.length ? stack[stack.length - 1] : null ;
                             state = -1 ;
                         }
@@ -4183,7 +4214,7 @@
     
                     case 105: // couple reading initialization
                         value = new MSCouple() ;
-                        //console.log("Registering new Couple as "+this.objects.length+"nth object") ;
+                        if (this.printAutomat) { console.log("Registering new Couple as "+this.objects.length+"nth object") ;}
                         this.objects.push(value) ;
                         hasValue = true ;
                         futureState = {s:2, i:0, n:2, o:value} ;
@@ -4193,7 +4224,7 @@
                     case 106: // simple string or decimal reading
                         value = a[i++] ;
                         hasValue = true ;
-                        //console.log("Registering new object '"+value+"' as "+this.objects.length+"nth object") ;
+                        if (this.printAutomat) { console.log("Registering new object '"+value+"' as "+this.objects.length+"nth object") ;}
                         this.objects.push(value) ;
                         state = -1 ;
                         break ;
@@ -4201,7 +4232,7 @@
                     case 107: // data reading
                         value = MSData.dataWithBase64String(a[i++]) ;
                         hasValue = true ;
-                        //console.log("Registering new data '"+value+"' as "+this.objects.length+"nth object") ;
+                        if (this.printAutomat) { console.log("Registering new data '"+value+"' as "+this.objects.length+"nth object") ; }
                         this.objects.push(value) ;
                         state = -1 ;
                         break ;
@@ -4209,7 +4240,7 @@
                     case 108: // true date reading
                         value = new MSDate(a[i++] - MSDate.SecsFrom19700101To20010101) ; // conversion from EPOCH to 01012001 reference point
                         hasValue = true ;
-                        //console.log("Registering new date '"+value+"' as "+this.objects.length+"nth object") ;
+                        if (this.printAutomat) { console.log("Registering new date '"+value+"' as "+this.objects.length+"nth object") ; }
                         this.objects.push(value) ;
                         state = -1 ;
                         break ;
@@ -4217,7 +4248,7 @@
                     case 109: // color reading
                         value = new MSColor(a[i++]) ;
                         hasValue = true ;
-                        // console.log("Registering new coloe '"+value+"' as "+this.objects.length+"nth object") ;
+                        if (this.printAutomat) { console.log("Registering new color '"+value+"' as "+this.objects.length+"nth object") ; }
                         this.objects.push(value) ;
                         state = -1 ;
                         break ;
@@ -4235,39 +4266,38 @@
                         else if ( value <= Date.DISTANT_PAST_TS) { value = Date.DISTANT_PAST_TS ; }
     
                         value = Date.dateWithUTCTime(value) ;
-                        //console.log("Registering new timestamp '"+value+"' as "+this.objects.length+"nth object") ;
+                        if (this.printAutomat) { console.log("Registering new timestamp '"+value+"' as "+this.objects.length+"nth object") ; }
                         this.objects.push(value) ;
                         hasValue = true ;
                         state = -1 ;
                         break ;
     
                     default:
-                        //console.log("Bad state encoutered during parsing") ;
-                        throw new Error('Bad state encoutered during parsing');
+                        if (this.printAutomat) { console.log("Bad state ' + state + ' encoutered during parsing") ; }
+                        throw new Error('Bad state ' + state + ' encoutered during parsing');
                 }
                 if (hasValue) {
     
                     switch(currentState.s) {
                         case 0:
                             ////console.log('     dict[\''+currentState.k+'\'] = '+MSTools.stringify(value)) ;
-                            //console.log('     dict[\''+currentState.k+'\'] = ' + dst(value));
+                            if (this.printAutomat) { console.log('     dict[\''+currentState.k+'\'] did get a new value'); }
                             currentState.o[currentState.k] = value ;
                             currentState.nextState = 101 ;
                             break ;
                         case 1:
                             ////console.log('     array['+currentState.i+'] = '+MSTools.stringify(value)) ;
-                            //console.log('     array['+currentState.i+'] = ' + dst(value)) ;
+                            if (this.printAutomat) { console.log('     array['+currentState.i+'] = did get a new value') ; }
                             currentState.o[currentState.i] = value ;
                             break ;
                         case 2:
                             ////console.log('     couple.firstMember = '+MSTools.stringify(value)) ;
-                            //console.log('     couple.firstMember = ' + dst(value)) ;
+                            if (this.printAutomat) { console.log('     couple.firstMember did get a new value') ; }
                             currentState.o.firstMember = value ;
                             currentState.s = 3 ;
                             break ;
                         case 3:
-                            ////console.log('     couple.secondMember = '+MSTools.stringify(value)) ;
-                            //console.log('     couple.secondMember = ' + dst(value)) ;
+                            if (this.printAutomat) { console.log('     couple.secondMember did get a new value') ; }
                             currentState.o.secondMember = value ;
                             break ;
                         default:
@@ -4277,32 +4307,35 @@
                     if (currentState.i === currentState.n) {
                         stack.pop() ;
                         currentState = stack.length ? stack[stack.length - 1] : null ;
-                        /*console.log('      <<<< did pop stack EOL') ;
-                        if (currentState) {
-                            console.log('      new current state.s = '+currentState.s+', i = '+currentState.i+', n = '+currentState.n+', => '+currentState.nextState) ;
+                        if (this.printAutomat) {
+                            console.log('      <<<< did pop stack EOL') ;
+                            if (currentState) {
+                                console.log('      new current state.s = '+currentState.s+', i = '+currentState.i+', n = '+currentState.n+', => '+currentState.nextState) ;
+                            }
+                            else {
+                                console.log('      : stack is empty') ;
+                            }
                         }
-                        else {
-                            console.log('      : stack is empty') ;
-                        }*/
                     }
                 }
                 if (futureState) {
                     stack.push(futureState) ;
-                    //console.log('      >>>> did push stack') ;
                     currentState = futureState ;
-                    //console.log('      new current state.s = '+currentState.s+', i = '+currentState.i+', n = '+currentState.n+', => '+currentState.nextState) ;
+                    if (this.printAutomat) {
+                        console.log('      >>>> did push stack') ;
+                        console.log('      new current state.s = '+currentState.s+', i = '+currentState.i+', n = '+currentState.n+', => '+currentState.nextState) ;
+                    }
                 }
             }
-            //console.log('---- MSTE automat final state : '+state+' stack depth : '+stack.length+'--------------------------') ;
+            if (this.printAutomat) { console.log('---- MSTE automat final state : '+state+' stack depth : '+stack.length+'--------------------------') ; }
             if (state !== -1)    { throw new Error("Bad final state "+state) ; }
             if (stack.length > 0) { throw new Error("Bad final stack with current stack state "+stack.lastObject().s) ; }
         }
     }, true) ;
     
     // ================ coder class interface ====================
-    MSTools.MSTE.Encoder = function() {
+    MSTools.MSTE.Encoder = function(options) {
         this.referenceKey = MSTools.localUniqueID() ;
-        this.tokens = ["MSTE0102", 0, "CRC00000000"] ;
         this.stream = [] ;
         this.encodedObjects = [] ;
         this.keyNames = [] ;
@@ -4312,6 +4345,20 @@
         this.stringsIndexes = {} ;
         this.numbersIndexes = {} ;
         this.isa = 'MSTECoder' ;
+        this.version = 0x0102 ;
+        this.dictionaryToken = 30 ;
+        this.stringToken = 21 ;
+        this.emptyStringToken = 3 ;
+    
+        if ($ok(options)) {
+            if (options.version === 0x0101) {
+                this.version = 0x0101 ;
+                this.dictionaryToken = 8 ;
+                this.stringToken = 5 ;
+                this.emptyStringToken = 26 ;
+            }
+        }
+        this.tokens = ["MSTE"+this.version.toHexa(4), 0, "CRC00000000"] ;
     } ;
     
     // ================  coder instance methods =============
@@ -4351,7 +4398,8 @@
                 this.classesNames[index] = aClass ;
                 this.classesIndexes[aClass] = index ;
             }
-            this.stream.push(50 + index) ;
+            if (this.version > 0x0101) { this.stream.push(50 + 2*index) ; }
+            else { this.stream.push(50 + index) ; }
         },
         pushNumber: function(aNumber) {
             var key = aNumber.toString(32) ; // yeah, less chars with 32 digits
@@ -4364,36 +4412,49 @@
                 index = this.encodedObjects.length ;
                 this.numbersIndexes[key] = index ;
                 this.encodedObjects[index] = null ; // we don't want to remove a non existant property at the end
-                this.stream.push(20) ;
+                if (this.version > 0x0101) {
+                    this.stream.push(20) ;
+                }
+                else if (Number.isInteger(aNumber)) {
+                    this.stream.push(3) ;
+                }
+                else {
+                    this.stream.push(4) ;
+                }
                 this.stream.push(aNumber) ;
             }
         },
         pushString: function(aString) {
-            var key = aString.length < 64 ? aString : ("0000000" + (aString.hashCode() >>> 0).toString(16)).substr(-8) ;
-            var index, array = this.stringsIndexes[key] ;
-            if ($ok(array)) {
-                var count = array.length, i ;
-                for (i = 0 ; i < count ; i++) {
-                    if (aString === array[i].string) { break ; }
-                }
-                if (i < count) {
-                    this.stream.push(9) ;
-                    this.stream.push(array[i].index) ;
+            if ($length(aString) === 0) {
+                this.stream.push(this.emptyStringToken) ;
+            }
+            else {
+                var key = aString.length < 64 ? aString : ("0000000" + (aString.hashCode() >>> 0).toString(16)).substr(-8) ;
+                var index, array = this.stringsIndexes[key] ;
+                if ($ok(array)) {
+                    var count = array.length, i ;
+                    for (i = 0 ; i < count ; i++) {
+                        if (aString === array[i].string) { break ; }
+                    }
+                    if (i < count) {
+                        this.stream.push(9) ;
+                        this.stream.push(array[i].index) ;
+                    }
+                    else {
+                        index = this.encodedObjects.length ;
+                        array.push({string:aString, index:index}) ;
+                        this.encodedObjects[index] = null ; // we don't want to remove a non existant property at the end
+                        this.stream.push(this.stringToken) ;
+                        this.stream.push(aString) ;
+                    }
                 }
                 else {
                     index = this.encodedObjects.length ;
-                    array.push({string:aString, index:index}) ;
+                    this.stringsIndexes[key] = [{string:aString, index:index}] ;
                     this.encodedObjects[index] = null ; // we don't want to remove a non existant property at the end
-                    this.stream.push(21) ;
+                    this.stream.push(this.stringToken) ;
                     this.stream.push(aString) ;
                 }
-            }
-            else {
-                index = this.encodedObjects.length ;
-                this.stringsIndexes[key] = [{string:aString, index:index}] ;
-                this.encodedObjects[index] = null ; // we don't want to remove a non existant property at the end
-                this.stream.push(21) ;
-                this.stream.push(aString) ;
             }
         },
         encodeObject:function(o) {
@@ -4414,7 +4475,7 @@
                         }
                         else { customClass = null ; }
                     }
-                    else { this.stream.push(30) ; } // a standard dictionary
+                    else { this.stream.push(this.dictionaryToken) ; }
     
                     if ((typeof o.msteKeys) === 'function') {
                         keys = o.msteKeys() ;

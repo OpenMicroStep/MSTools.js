@@ -19,6 +19,7 @@ MSTools.defineInstanceMethods(Number, {
         }
         return s ;
     },
+    toNumber:function() { return this ; },
     toInt:function() {
         if (isFinite(this) && !isNaN(this)) {
             if ((this >= -2147483648) && (this <= 2147483647)) { return this | 0 ; }

@@ -7,8 +7,7 @@ MSNaturalArray.prototype = Object.create(MSArray.prototype, { constructor: {valu
 
 // ================ constants ====================
 MSTools.defineHiddenConstants(MSNaturalArray.prototype, {
-    isa:'Naturals',
-    MSTECode:26
+    isa:'Naturals'
 }, true) ;
 
 // ================= class methods ===============
@@ -22,7 +21,7 @@ MSTools.defineInstanceMethods(MSNaturalArray, {
     toMSTE: function(encoder) {
         if (encoder.shouldPushObject(this)) {
             var i, count = this.length ;
-            encoder.push(this.MSTECode) ;
+            encoder.push(encoder.version > 0x0101 ? 26 : 21) ;
             encoder.push(count) ;
             for (i = 0 ; i < count ; i++) { encoder.push(this.objectAtIndex(i)) ; }
         }

@@ -172,7 +172,7 @@ MSTools.defineInstanceMethods(MSColor, {
     toArray: function() { return [this.red, this.green, this.blue, this.alpha] ; },
     toMSTE: function(encoder) {
         if (encoder.shouldPushObject(this)) {
-            encoder.push(24) ;
+            encoder.push(encoder.version > 0x0101 ? 24 : 7) ;
             encoder.push(this.toNumber()) ;
         }
     }

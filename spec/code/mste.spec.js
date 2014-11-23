@@ -21,9 +21,11 @@ describe("==========Tests MSTE protocol ========", function() {
         var decoder = new MSTools.MSTE.Decoder() ;
 
         var r;
+
         try {
             r = decoder.parse(oldMSTEString) ;
-        } catch (e) {
+        }
+        catch (e) {
             console.log(e);
             expect(true).toBe(false) ;
             return;
@@ -38,6 +40,95 @@ describe("==========Tests MSTE protocol ========", function() {
 		expect(r.CARD).toBe('planningBox') ;
 		expect(r.INAM).toBe('planning') ;
 
+
+	}) ;
+	it("Test encoding/decoding of version MSTE0101", function() {
+		var array = [
+			{
+				id: "0001",
+				type: "donut",
+				name: "Cake",
+				ppu: 0.55,
+				batters:
+					{
+						batter:
+							[
+								{ id: "1001", type: "Regular" },
+								{ id: "1002", type: "Chocolate" },
+								{ id: "1003", type: "Blueberry" },
+								{ id: "1004", type: "Devil's Food" }
+							]
+					},
+				topping:
+					[
+						{ id: "5001", type: "None" },
+						{ id: "5002", type: "Glazed" },
+						{ id: "5005", type: "Sugar" },
+						{ id: "5007", type: "Powdered Sugar" },
+						{ id: "5006", type: "Chocolate with Sprinkles" },
+						{ id: "5003", type: "Chocolate" },
+						{ id: "5004", type: "Maple" }
+					]
+			},
+			{
+				id: "0002",
+				type: "donut",
+				name: "Raised",
+				ppu: 0.55,
+				batters:
+					{
+						"batter":
+							[
+								{ id: "1001", type: "Regular" }
+							]
+					},
+				topping:
+					[
+						{ id: "5001", type: "None" },
+						{ id: "5002", type: "Glazed" },
+						{ id: "5005", type: "Sugar" },
+						{ id: "5003", type: "Chocolate" },
+						{ id: "5004", type: "Maple" }
+					]
+			},
+			{
+				id: "0003",
+				type: "donut",
+				name: "Old Fashioned",
+				ppu: 0.55,
+				batters:
+					{
+						"batter":
+							[
+								{ id: "1001", type: "Regular" },
+								{ id: "1002", type: "Chocolate" }
+							]
+					},
+				topping:
+					[
+						{ id: "5001", type: "None" },
+						{ id: "5002", type: "Glazed" },
+						{ id: "5003", type: "Chocolate" },
+						{ id: "5004", type: "Maple" }
+					]
+			}
+		] ;
+
+		var encoder = new MSTools.MSTE.Encoder({version:0x0101}) ;
+
+		encoder.encodeObject(array) ;
+
+        var tokens = encoder.finalizeTokens() ;
+
+		var m = MSTools.stringify(tokens) ;
+
+        //console.log("Temporary MSTE 101 string : '"+m+"'") ;
+
+		var r = MSTools.MSTE.parse(m) ;
+	    var s = MSTools.stringify(r) ;
+
+
+		expect(s).toBe(MSTools.stringify(array)) ;
 	}) ;
 
 	it("Test encoding/decoding of version MSTE0102", function() {
@@ -211,20 +302,162 @@ describe("==========Tests MSTE protocol ========", function() {
 
     });
 
+    it("decodes a natural array", function () {
+        var JMChain = "[\"MSTE0102\",8,\"CRCD6330919\",0,0,26,1,256]";
 
-	it("encodes simple references (same ref is used multiple times: a person is father to one and married to another)", function () {
+        var r = MSTools.MSTE.parse(JMChain) ;
+
+        expect(r[0]).toBe(256) ;
+    });
+
+
+    it("bug on code 6", function () {
+        var encodedArray = ["MSTE0102",772,"CRC00000000",0,37,"ACT","OPTS","VARS","search","code","options","index","objectKey","flags","name","city","activityType","globals","strings","nameRestriction","value","searchMode","type","activity","tutor","proprio","parent","configsForm","defaultSwitch","configurationsList","forceDontChoice","found","mapSwitch","selectTable","columns","cityColumn","nameColumn","parentIndexSelector","comparisonSelector","target","MID","TIME",30,5,0,21,"find",1,30,0,2,30,3,3,30,11,4,30,4,5,32,0,0,6,20,-1,7,20,-1,8,20,264,9,30,4,5,32,0,20,100,6,20,-1,7,20,-1,8,20,264,10,30,4,5,32,0,0,6,20,-1,7,20,-1,8,20,264,11,30,5,12,30,1,13,31,86,21,"ARTS MARTIAUX",21,"ATHLETISME",21,"AVIRON",21,"BADMINTON",21,"BADMINTON-Scolaire",21,"BASKET-BALL",21,"BOOMERANG",21,"BOULE DE FORT",21,"BOULE LYONNAISE",21,"BOXE",21,"BOXE AMERICAINE",21,"BOXE ANGLAISE",21,"BOXE FRANCAISE",21,"BOXE THAILANDAISE",21,"CANNE ET BATON",21,"CANOE KAYAK",21,"CAPOEIRA",21,"CATCH",21,"CONCERTS",21,"COURS EPS",21,"CYCLISME",21,"CYCLOTOURISME",21,"DANSE",21,"DANSE SUR GLACE",21,"DIVERS",21,"ESCALADE",21,"ESCRIME",21,"FLECHETTE",21,"FOOT EN SALLE",21,"FOOTBALL",21,"FOOTBALL AMERICAIN",21,"FORMATIONS",21,"GOLF",21,"GRIMPER A LA CORDE",21,"GYMNASTIQUE",21,"GYMNASTIQUE ENTRETIEN",21,"HALTEROPHILIE",21,"HANDBALL",21,"HOCKEY SUR GAZON",21,"HOCKEY SUR GLACE",21,"INTERVIEW/ RADIO/TELE",21,"JU JITSU",21,"JUDO",21,"KARATE",21,"KENDO",21,"KIN-BALL",21,"LUTTE",21,"MOTOCYCLISME",21,"MULTISPORTS",21,"MUSCULATION",21,"NETTOYAGE",21,"PARACHUTISME",21,"PATINAGE SUR GLACE",21,"PETANQUE",21,"PLANCHE A VOILE",21,"PLONGEE SOUS MARINE",21,"PREPA.MANIF.",21,"RECEPTIONS/FESTIVITES",21,"REUNIONS",21,"RINGUETTE",21,"ROLLER HOCKEY",21,"ROLLER SKATING",21,"RUGBY",21,"SAUNA",21,"SPELEOLOGIE",21,"SPORTS DE GLACE",21,"SPORTS SCOLAIRES",21,"TAEKWONDO",21,"TAI DOH",21,"TAI JITSU",21,"TENNIS",21,"TENNIS DE TABLE",21,"TIR A L'ARC",21,"TIR A LA CIBLE",21,"TONFA",21,"TONFA",21,"TRAMPOLINE",21,"TRAVAUX",21,"TRIATHLON",21,"TWIRLING",21,"TX PAR ENTREPRISE",21,"ULTIMATE",21,"VETERANS",21,"VIET VO DAO",21,"VOILE",21,"VOLLEY BALL",5,32,0,0,6,20,-1,7,20,-1,8,20,18952,14,30,5,8,20,2824,15,3,5,32,0,0,6,20,-1,7,20,-1,16,30,5,8,20,17672,15,20,4,5,32,0,0,6,20,-1,7,20,-1,17,30,5,12,30,1,13,31,24,21,"Aire de sports de Glace",21,"Court de Tennis Couvert",21,"Court de Tennis Plein-Air",21,"Divers",21,"Equipement d'athletisme",21,"HALLES",21,"J.d'arc C.",21,"J.d'arc P.A.",21,"PARKINGS",21,"Pas de tir",21,"Plaine de Golf",21,"Plateau EPS",21,"Salle de Reception",21,"Salle Omnisports",21,"Salle Polyvalente",21,"Salle Specialisee",21,"SALLES",21,"Skate par et Velo freestyle",21,"Terrain d'Honneur",21,"Terrain en herbe",21,"Terrain exterieur",21,"Terrain stabilise",21,"Terrain synthetique",21,"Velodrome",5,32,0,0,6,20,-1,7,20,-1,8,20,18952,18,30,5,12,30,1,13,31,89,21,"ARTS MARTIAUX \u00e9\u00e0",21,"ATHLETISME",21,"AVIRON",21,"BADMINTON",21,"BADMINTON-Scolaire",21,"BASKET-BALL",21,"BOOMERANG",21,"BOULE DE FORT",21,"BOULE LYONNAISE",21,"BOXE",21,"BOXE AMERICAINE",21,"BOXE ANGLAISE",21,"BOXE FRANCAISE",21,"BOXE THAILANDAISE",21,"CANNE ET BATON",21,"CANOE KAYAK",21,"CAPOEIRA",21,"CATCH",21,"CONCERTS",21,"COURS EPS",21,"CYCLISME",21,"CYCLOTOURISME",21,"DANSE",21,"DANSE SUR GLACE",21,"DIVERS",21,"ESCALADE",21,"ESCRIME",21,"FLECHETTE",21,"FOOT EN SALLE",21,"FOOTBALL",21,"FOOTBALL AMERICAIN",21,"FORMATIONS",21,"GOLF",21,"GRIMPER A LA CORDE",21,"GYMNASTIQUE",21,"GYMNASTIQUE ENTRETIEN",21,"HALTEROPHILIE",21,"HANDBALL",21,"HOCKEY SUR GAZON",21,"HOCKEY SUR GLACE",21,"INTERVIEW/ RADIO/TELE",21,"JU JITSU",21,"JUDO",21,"KARATE",21,"KENDO",21,"KIN-BALL",21,"LUTTE",21,"MOTOCYCLISME",21,"MULTISPORTS",21,"MUSCULATION",21,"NATATION",21,"NETTOYAGE",21,"PARACHUTISME",21,"PATINAGE SUR GLACE",21,"PETANQUE",21,"PLANCHE A VOILE",21,"PLONGEE SOUS MARINE",21,"PREPA.MANIF.",21,"RECEPTIONS/FESTIVITES",21,"REUNIONS",21,"RINGUETTE",21,"ROLLER HOCKEY",21,"ROLLER SKATING",21,"RUGBY",21,"SAUNA",21,"SPELEOLOGIE",21,"SPORTS DE GLACE",21,"SPORTS SCOLAIRES",21,"SUBAQUATIQUE",21,"TAEKWONDO",21,"TAI DOH",21,"TAI JITSU",21,"TENNIS",21,"TENNIS DE TABLE",21,"TIR A L'ARC",21,"TIR A LA CIBLE",21,"TONFA",21,"TONFA",21,"TRAMPOLINE",21,"TRAVAUX",21,"TRIATHLON",21,"TWIRLING",21,"TX PAR ENTREPRISE",21,"ULTIMATE",21,"VETERANS",21,"VIET VO DAO",21,"VOILE",21,"VOLLEY BALL",21,"WATER-POLO",5,32,0,0,6,20,-1,7,20,-1,8,20,18952,19,30,4,5,32,0,0,6,20,-1,7,20,-1,8,20,264,20,30,4,5,32,0,0,6,20,-1,7,20,-1,8,20,264,21,30,4,5,32,0,0,6,20,-1,7,20,-1,8,20,264,22,30,2,23,30,5,8,20,17672,15,20,0,5,32,0,0,6,20,-1,7,20,-1,24,30,5,12,30,1,25,21,"YES",5,32,0,25,"",6,20,-1,7,20,-1,8,20,16704,26,30,2,27,30,5,8,20,17800,15,20,0,5,32,0,0,6,20,-1,7,20,-1,28,30,6,12,30,4,29,30,2,30,32,21,"city",0,31,32,21,"name",0,32,21,"parentIndex",33,21,"name",34,21,"select",5,32,0,25,"",6,20,-1,7,20,-1,8,20,18112,15,20,-1,35,20,4,36,20,426763823.875];
+        //var encodedArray = ["MSTE0102",776,"CRC00000000",0,37,"ACT","OPTS","VARS","search","code","options","index","objectKey","flags","activity","globals","strings","city","activityType","type","searchMode","value","nameRestriction","name","tutor","proprio","parent","configsForm","defaultSwitch","configurationsList","forceDontChoice","found","mapSwitch","selectTable","columns","cityColumn","nameColumn","parentIndexSelector","comparisonSelector","target","MID","TIME",30,5,0,21,"select",1,30,0,2,30,3,3,30,11,4,30,4,5,32,0,0,6,20,-1,7,20,-1,8,20,264,9,30,5,10,30,1,11,31,89,21,"ARTS MARTIAUX \u00e9\u00e0",21,"ATHLETISME",21,"AVIRON",21,"BADMINTON",21,"BADMINTON-Scolaire",21,"BASKET-BALL",21,"BOOMERANG",21,"BOULE DE FORT",21,"BOULE LYONNAISE",21,"BOXE",21,"BOXE AMERICAINE",21,"BOXE ANGLAISE",21,"BOXE FRANCAISE",21,"BOXE THAILANDAISE",21,"CANNE ET BATON",21,"CANOE KAYAK",21,"CAPOEIRA",21,"CATCH",21,"CONCERTS",21,"COURS EPS",21,"CYCLISME",21,"CYCLOTOURISME",21,"DANSE",21,"DANSE SUR GLACE",21,"DIVERS",21,"ESCALADE",21,"ESCRIME",21,"FLECHETTE",21,"FOOT EN SALLE",21,"FOOTBALL",21,"FOOTBALL AMERICAIN",21,"FORMATIONS",21,"GOLF",21,"GRIMPER A LA CORDE",21,"GYMNASTIQUE",21,"GYMNASTIQUE ENTRETIEN",21,"HALTEROPHILIE",21,"HANDBALL",21,"HOCKEY SUR GAZON",21,"HOCKEY SUR GLACE",21,"INTERVIEW/ RADIO/TELE",21,"JU JITSU",21,"JUDO",21,"KARATE",21,"KENDO",21,"KIN-BALL",21,"LUTTE",21,"MOTOCYCLISME",21,"MULTISPORTS",21,"MUSCULATION",21,"NATATION",21,"NETTOYAGE",21,"PARACHUTISME",21,"PATINAGE SUR GLACE",21,"PETANQUE",21,"PLANCHE A VOILE",21,"PLONGEE SOUS MARINE",21,"PREPA.MANIF.",21,"RECEPTIONS/FESTIVITES",21,"REUNIONS",21,"RINGUETTE",21,"ROLLER HOCKEY",21,"ROLLER SKATING",21,"RUGBY",21,"SAUNA",21,"SPELEOLOGIE",21,"SPORTS DE GLACE",21,"SPORTS SCOLAIRES",21,"SUBAQUATIQUE",21,"TAEKWONDO",21,"TAI DOH",21,"TAI JITSU",21,"TENNIS",21,"TENNIS DE TABLE",21,"TIR A L'ARC",21,"TIR A LA CIBLE",21,"TONFA",21,"TONFA",21,"TRAMPOLINE",21,"TRAVAUX",21,"TRIATHLON",21,"TWIRLING",21,"TX PAR ENTREPRISE",21,"ULTIMATE",21,"VETERANS",21,"VIET VO DAO",21,"VOILE",21,"VOLLEY BALL",21,"WATER-POLO",5,32,0,0,6,20,-1,7,20,-1,8,20,18952,12,30,4,5,32,0,0,6,20,-1,7,20,-1,8,20,264,13,30,5,10,30,1,11,31,86,21,"ARTS MARTIAUX",21,"ATHLETISME",21,"AVIRON",21,"BADMINTON",21,"BADMINTON-Scolaire",21,"BASKET-BALL",21,"BOOMERANG",21,"BOULE DE FORT",21,"BOULE LYONNAISE",21,"BOXE",21,"BOXE AMERICAINE",21,"BOXE ANGLAISE",21,"BOXE FRANCAISE",21,"BOXE THAILANDAISE",21,"CANNE ET BATON",21,"CANOE KAYAK",21,"CAPOEIRA",21,"CATCH",21,"CONCERTS",21,"COURS EPS",21,"CYCLISME",21,"CYCLOTOURISME",21,"DANSE",21,"DANSE SUR GLACE",21,"DIVERS",21,"ESCALADE",21,"ESCRIME",21,"FLECHETTE",21,"FOOT EN SALLE",21,"FOOTBALL",21,"FOOTBALL AMERICAIN",21,"FORMATIONS",21,"GOLF",21,"GRIMPER A LA CORDE",21,"GYMNASTIQUE",21,"GYMNASTIQUE ENTRETIEN",21,"HALTEROPHILIE",21,"HANDBALL",21,"HOCKEY SUR GAZON",21,"HOCKEY SUR GLACE",21,"INTERVIEW/ RADIO/TELE",21,"JU JITSU",21,"JUDO",21,"KARATE",21,"KENDO",21,"KIN-BALL",21,"LUTTE",21,"MOTOCYCLISME",21,"MULTISPORTS",21,"MUSCULATION",21,"NETTOYAGE",21,"PARACHUTISME",21,"PATINAGE SUR GLACE",21,"PETANQUE",21,"PLANCHE A VOILE",21,"PLONGEE SOUS MARINE",21,"PREPA.MANIF.",21,"RECEPTIONS/FESTIVITES",21,"REUNIONS",21,"RINGUETTE",21,"ROLLER HOCKEY",21,"ROLLER SKATING",21,"RUGBY",21,"SAUNA",21,"SPELEOLOGIE",21,"SPORTS DE GLACE",21,"SPORTS SCOLAIRES",21,"TAEKWONDO",21,"TAI DOH",21,"TAI JITSU",21,"TENNIS",21,"TENNIS DE TABLE",21,"TIR A L'ARC",21,"TIR A LA CIBLE",21,"TONFA",21,"TONFA",21,"TRAMPOLINE",21,"TRAVAUX",21,"TRIATHLON",21,"TWIRLING",21,"TX PAR ENTREPRISE",21,"ULTIMATE",21,"VETERANS",21,"VIET VO DAO",21,"VOILE",21,"VOLLEY BALL",5,32,0,0,6,20,-1,7,20,-1,8,20,18952,14,30,5,10,30,1,11,31,24,21,"Aire de sports de Glace",21,"Court de Tennis Couvert",21,"Court de Tennis Plein-Air",21,"Divers",21,"Equipement d'athletisme",21,"HALLES",21,"J.d'arc C.",21,"J.d'arc P.A.",21,"PARKINGS",21,"Pas de tir",21,"Plaine de Golf",21,"Plateau EPS",21,"Salle de Reception",21,"Salle Omnisports",21,"Salle Polyvalente",21,"Salle Specialisee",21,"SALLES",21,"Skate par et Velo freestyle",21,"Terrain d'Honneur",21,"Terrain en herbe",21,"Terrain exterieur",21,"Terrain stabilise",21,"Terrain synthetique",21,"Velodrome",5,32,0,0,6,20,-1,7,20,-1,8,20,18952,15,30,5,8,20,17672,16,20,3,5,32,0,0,6,20,-1,7,20,-1,17,30,5,8,20,2824,16,3,5,32,0,0,6,20,-1,7,20,-1,18,30,5,8,20,264,16,21,"AIRES",5,32,0,20,100,6,20,-1,7,20,-1,19,30,4,5,32,0,0,6,20,-1,7,20,-1,8,20,264,20,30,4,5,32,0,0,6,20,-1,7,20,-1,8,20,264,21,30,4,5,32,0,0,6,20,-1,7,20,-1,8,20,264,22,30,2,23,30,5,8,20,17672,16,20,2,5,32,0,0,6,20,-1,7,20,-1,24,30,6,10,30,1,25,21,"YES",8,20,16704,16,21,"AIRES",5,32,0,6,6,20,0,7,20,-1,26,30,2,27,30,5,8,20,17800,16,20,0,5,32,0,0,6,20,-1,7,20,-1,28,30,6,10,30,4,29,30,2,30,32,21,"city",0,31,32,21,"name",0,32,21,"parentIndex",33,21,"name",34,21,"select",5,32,0,6,6,20,-1,7,20,-1,8,20,17984,16,20,-1,35,20,4,36,20,426700506.435];
+        var objectToEncode = {"ACT":"select","OPTS":{},"VARS":{"search":{"code":{"options":{"firstMember":null,"secondMember":null},"index":-1,"objectKey":-1,"flags":264},"activity":{"globals":{"strings":["ARTS MARTIAUX éà","ATHLETISME","AVIRON","BADMINTON","BADMINTON-Scolaire","BASKET-BALL","BOOMERANG","BOULE DE FORT","BOULE LYONNAISE","BOXE","BOXE AMERICAINE","BOXE ANGLAISE","BOXE FRANCAISE","BOXE THAILANDAISE","CANNE ET BATON","CANOE KAYAK","CAPOEIRA","CATCH","CONCERTS","COURS EPS","CYCLISME","CYCLOTOURISME","DANSE","DANSE SUR GLACE","DIVERS","ESCALADE","ESCRIME","FLECHETTE","FOOT EN SALLE","FOOTBALL","FOOTBALL AMERICAIN","FORMATIONS","GOLF","GRIMPER A LA CORDE","GYMNASTIQUE","GYMNASTIQUE ENTRETIEN","HALTEROPHILIE","HANDBALL","HOCKEY SUR GAZON","HOCKEY SUR GLACE","INTERVIEW/ RADIO/TELE","JU JITSU","JUDO","KARATE","KENDO","KIN-BALL","LUTTE","MOTOCYCLISME","MULTISPORTS","MUSCULATION","NATATION","NETTOYAGE","PARACHUTISME","PATINAGE SUR GLACE","PETANQUE","PLANCHE A VOILE","PLONGEE SOUS MARINE","PREPA.MANIF.","RECEPTIONS/FESTIVITES","REUNIONS","RINGUETTE","ROLLER HOCKEY","ROLLER SKATING","RUGBY","SAUNA","SPELEOLOGIE","SPORTS DE GLACE","SPORTS SCOLAIRES","SUBAQUATIQUE","TAEKWONDO","TAI DOH","TAI JITSU","TENNIS","TENNIS DE TABLE","TIR A L'ARC","TIR A LA CIBLE","TONFA","TONFA","TRAMPOLINE","TRAVAUX","TRIATHLON","TWIRLING","TX PAR ENTREPRISE","ULTIMATE","VETERANS","VIET VO DAO","VOILE","VOLLEY BALL","WATER-POLO"]},"options":{"firstMember":null,"secondMember":null},"index":-1,"objectKey":-1,"flags":18952},"city":{"options":{"firstMember":null,"secondMember":null},"index":-1,"objectKey":-1,"flags":264},"activityType":{"globals":{"strings":["ARTS MARTIAUX","ATHLETISME","AVIRON","BADMINTON","BADMINTON-Scolaire","BASKET-BALL","BOOMERANG","BOULE DE FORT","BOULE LYONNAISE","BOXE","BOXE AMERICAINE","BOXE ANGLAISE","BOXE FRANCAISE","BOXE THAILANDAISE","CANNE ET BATON","CANOE KAYAK","CAPOEIRA","CATCH","CONCERTS","COURS EPS","CYCLISME","CYCLOTOURISME","DANSE","DANSE SUR GLACE","DIVERS","ESCALADE","ESCRIME","FLECHETTE","FOOT EN SALLE","FOOTBALL","FOOTBALL AMERICAIN","FORMATIONS","GOLF","GRIMPER A LA CORDE","GYMNASTIQUE","GYMNASTIQUE ENTRETIEN","HALTEROPHILIE","HANDBALL","HOCKEY SUR GAZON","HOCKEY SUR GLACE","INTERVIEW/ RADIO/TELE","JU JITSU","JUDO","KARATE","KENDO","KIN-BALL","LUTTE","MOTOCYCLISME","MULTISPORTS","MUSCULATION","NETTOYAGE","PARACHUTISME","PATINAGE SUR GLACE","PETANQUE","PLANCHE A VOILE","PLONGEE SOUS MARINE","PREPA.MANIF.","RECEPTIONS/FESTIVITES","REUNIONS","RINGUETTE","ROLLER HOCKEY","ROLLER SKATING","RUGBY","SAUNA","SPELEOLOGIE","SPORTS DE GLACE","SPORTS SCOLAIRES","TAEKWONDO","TAI DOH","TAI JITSU","TENNIS","TENNIS DE TABLE","TIR A L'ARC","TIR A LA CIBLE","TONFA","TONFA","TRAMPOLINE","TRAVAUX","TRIATHLON","TWIRLING","TX PAR ENTREPRISE","ULTIMATE","VETERANS","VIET VO DAO","VOILE","VOLLEY BALL"]},"options":{"firstMember":null,"secondMember":null},"index":-1,"objectKey":-1,"flags":18952},"type":{"globals":{"strings":["Aire de sports de Glace","Court de Tennis Couvert","Court de Tennis Plein-Air","Divers","Equipement d'athletisme","HALLES","J.d'arc C.","J.d'arc P.A.","PARKINGS","Pas de tir","Plaine de Golf","Plateau EPS","Salle de Reception","Salle Omnisports","Salle Polyvalente","Salle Specialisee","SALLES","Skate par et Velo freestyle","Terrain d'Honneur","Terrain en herbe","Terrain exterieur","Terrain stabilise","Terrain synthetique","Velodrome"]},"options":{"firstMember":null,"secondMember":null},"index":-1,"objectKey":-1,"flags":18952},"searchMode":{"flags":17672,"value":3,"options":{"firstMember":null,"secondMember":null},"index":-1,"objectKey":-1},"nameRestriction":{"flags":2824,"value":"","options":{"firstMember":null,"secondMember":null},"index":-1,"objectKey":-1},"name":{"flags":264,"value":"AIRES","options":{"firstMember":null,"secondMember":100},"index":-1,"objectKey":-1},"tutor":{"options":{"firstMember":null,"secondMember":null},"index":-1,"objectKey":-1,"flags":264},"proprio":{"options":{"firstMember":null,"secondMember":null},"index":-1,"objectKey":-1,"flags":264},"parent":{"options":{"firstMember":null,"secondMember":null},"index":-1,"objectKey":-1,"flags":264}},"#default#":{"searchTitleMessage":{"flags":392,"value":"Choisissez un nouveau Lieu à éditer ou créez-en un","options":{"firstMember":null,"secondMember":null},"index":-1,"objectKey":-1},"searchSwitch":{"flags":17672,"value":0,"options":{"firstMember":null,"secondMember":null},"index":-1,"objectKey":-1},"switch":{"globals":{"enabledObjects":[0,1,2]},"flags":17416,"value":0,"options":{"firstMember":null,"secondMember":null},"index":-1,"objectKey":-1}},"configsForm":{"defaultSwitch":{"flags":17672,"value":2,"options":{"firstMember":null,"secondMember":null},"index":-1,"objectKey":-1},"configurationsList":{"globals":{"forceDontChoice":"YES"},"flags":16704,"value":"AIRES","options":{"firstMember":null,"secondMember":[]},"index":0,"objectKey":-1}},"found":{"mapSwitch":{"flags":17800,"value":0,"options":{"firstMember":null,"secondMember":null},"index":-1,"objectKey":-1},"selectTable":{"globals":{"columns":{"cityColumn":{"firstMember":"city","secondMember":null},"nameColumn":{"firstMember":"name","secondMember":null}},"parentIndexSelector":"parentIndex","comparisonSelector":"name","target":"select"},"options":{"firstMember":null,"secondMember":[]},"index":-1,"objectKey":-1,"flags":17984,"value":-1}}},"MID":4,"TIME":426700506.435};
+
+
+        var encoder = new MSTools.MSTE.Encoder() ;
+
+        encoder.encodeObject(objectToEncode) ;
+
+        var tokens = encoder.finalizeTokens() ;
+
+        var m = MSTools.stringify(tokens) ;
+
+        //console.log(tokens);
+        //console.log(encodedArray);
+
+        //expect(encodedArray).toBe(tokens);
+
+
+        var decoder = new MSTools.MSTE.Decoder() ;
+
+        var r;
+        try {
+            r = decoder.parse(m) ;
+        } catch (e) {
+            console.log(e);
+            expect(true).toBe(false) ;
+            return;
+        }
+        //console.log(r) ;
+
+
+        //expect($equals(r, objectToEncode)).toBe(true);
+
+        try {
+            r = decoder.parse(MSTools.stringify(encodedArray)) ;
+        } catch (e) {
+            console.log("encodedArray " + e);
+            expect(true).toBe(false) ;
+            return;
+        }
+
+    });
+
+
+    it("Bug on Xvar class not re-encoded properly", function () {
+        var encodedArray = ["MSTE0102",974,"CRC8A517221",1,"XVar",63,"STAT","RSRC","path","basePath","modificationDate","isFolder","CARD","PACT","OPTS","CTXCLASS","HELPERS","cityName","targets","selection","index","name","FIRST_FIELD","INAM","ACTIONS","progPrint","home","add","addConfig","find","configurationsList","switch","makesDefault","CARDTITLE","MID","VARS","search","code","options","objectKey","flags","city","activityType","globals","strings","nameRestriction","value","searchMode","type","activity","tutor","proprio","parent","#default#","searchTitleMessage","searchSwitch","enabledObjects","configsForm","defaultSwitch","forceDontChoice","found","mapSwitch","selectTable","columns","cityColumn","nameColumn","parentIndexSelector","comparisonSelector","target",30,10,0,20,2,1,31,1,30,4,2,21,"W:\\PlanitecMs\\Library\\XNet\\PlanitecServer.xna\\Resources\\Microstep\\MASH\\interfaces\\fr\\placeSearch@placeSearch.json",3,21,"_main_\/interfaces\/fr\/placeSearch@placeSearch",4,23,1404138188.000000000000000,5,20,0,6,21,"placeSearch",7,21,"newContext",8,30,3,9,21,"PPlaceSelectionContext",10,30,1,11,32,30,4,2,21,"W:\\PlanitecMs\\Library\\XNet\\SharedResources\\misc\\zipCodes.csv",3,21,"_main_\/misc\/zipCodes",4,23,1404138188.000000000000000,5,20,0,30,4,12,31,1,21,"cityName",13,21,"indexName",14,9,22,15,21,"zipCodes",16,32,21,"name",21,"search",17,9,8,18,30,8,19,20,0,20,20,7,21,20,0,22,20,0,23,20,0,24,20,0,25,20,0,26,20,0,27,21,"\/Gestion des lieux\/S\u00E9lection",28,20,2,29,30,4,30,30,11,31,50,4,32,32,0,0,14,12,-1,33,12,-1,34,13,264,15,50,4,32,32,0,20,100,14,12,-1,33,12,-1,34,13,264,35,50,4,32,32,0,0,14,12,-1,33,12,-1,34,13,264,36,50,5,37,30,1,38,31,86,21,"ARTS MARTIAUX",21,"ATHLETISME",21,"AVIRON",21,"BADMINTON",21,"BADMINTON-Scolaire",21,"BASKET-BALL",21,"BOOMERANG",21,"BOULE DE FORT",21,"BOULE LYONNAISE",21,"BOXE",21,"BOXE AMERICAINE",21,"BOXE ANGLAISE",21,"BOXE FRANCAISE",21,"BOXE THAILANDAISE",21,"CANNE ET BATON",21,"CANOE KAYAK",21,"CAPOEIRA",21,"CATCH",21,"CONCERTS",21,"COURS EPS",21,"CYCLISME",21,"CYCLOTOURISME",21,"DANSE",21,"DANSE SUR GLACE",21,"DIVERS",21,"ESCALADE",21,"ESCRIME",21,"FLECHETTE",21,"FOOT EN SALLE",21,"FOOTBALL",21,"FOOTBALL AMERICAIN",21,"FORMATIONS",21,"GOLF",21,"GRIMPER A LA CORDE",21,"GYMNASTIQUE",21,"GYMNASTIQUE ENTRETIEN",21,"HALTEROPHILIE",21,"HANDBALL",21,"HOCKEY SUR GAZON",21,"HOCKEY SUR GLACE",21,"INTERVIEW\/ RADIO\/TELE",21,"JU JITSU",21,"JUDO",21,"KARATE",21,"KENDO",21,"KIN-BALL",21,"LUTTE",21,"MOTOCYCLISME",21,"MULTISPORTS",21,"MUSCULATION",21,"NETTOYAGE",21,"PARACHUTISME",21,"PATINAGE SUR GLACE",21,"PETANQUE",21,"PLANCHE A VOILE",21,"PLONGEE SOUS MARINE",21,"PREPA.MANIF.",21,"RECEPTIONS\/FESTIVITES",21,"REUNIONS",21,"RINGUETTE",21,"ROLLER HOCKEY",21,"ROLLER SKATING",21,"RUGBY",21,"SAUNA",21,"SPELEOLOGIE",21,"SPORTS DE GLACE",21,"SPORTS SCOLAIRES",21,"TAEKWONDO",21,"TAI DOH",21,"TAI JITSU",21,"TENNIS",21,"TENNIS DE TABLE",21,"TIR A L'ARC",21,"TIR A LA CIBLE",21,"TONFA",21,"TONFA",21,"TRAMPOLINE",21,"TRAVAUX",21,"TRIATHLON",21,"TWIRLING",21,"TX PAR ENTREPRISE",21,"ULTIMATE",21,"VETERANS",21,"VIET VO DAO",21,"VOILE",21,"VOLLEY BALL",32,32,0,0,14,12,-1,33,12,-1,34,13,18952,39,50,5,34,13,2824,40,3,32,32,0,0,14,12,-1,33,12,-1,41,50,5,34,13,17672,40,20,4,32,32,0,0,14,12,-1,33,12,-1,42,50,5,37,30,1,38,31,24,21,"Aire de sports de Glace",21,"Court de Tennis Couvert",21,"Court de Tennis Plein-Air",21,"Divers",21,"Equipement d'athletisme",21,"HALLES",21,"J.d'arc C.",21,"J.d'arc P.A.",21,"PARKINGS",21,"Pas de tir",21,"Plaine de Golf",21,"Plateau EPS",21,"Salle de Reception",21,"Salle Omnisports",21,"Salle Polyvalente",21,"Salle Specialisee",21,"SALLES",21,"Skate par et Velo freestyle",21,"Terrain d'Honneur",21,"Terrain en herbe",21,"Terrain exterieur",21,"Terrain stabilise",21,"Terrain synthetique",21,"Velodrome",32,32,0,0,14,12,-1,33,12,-1,34,13,18952,43,50,5,37,30,1,38,31,89,21,"ARTS MARTIAUX \u00E9\u00E0",21,"ATHLETISME",21,"AVIRON",21,"BADMINTON",21,"BADMINTON-Scolaire",21,"BASKET-BALL",21,"BOOMERANG",21,"BOULE DE FORT",21,"BOULE LYONNAISE",21,"BOXE",21,"BOXE AMERICAINE",21,"BOXE ANGLAISE",21,"BOXE FRANCAISE",21,"BOXE THAILANDAISE",21,"CANNE ET BATON",21,"CANOE KAYAK",21,"CAPOEIRA",21,"CATCH",21,"CONCERTS",21,"COURS EPS",21,"CYCLISME",21,"CYCLOTOURISME",21,"DANSE",21,"DANSE SUR GLACE",21,"DIVERS",21,"ESCALADE",21,"ESCRIME",21,"FLECHETTE",21,"FOOT EN SALLE",21,"FOOTBALL",21,"FOOTBALL AMERICAIN",21,"FORMATIONS",21,"GOLF",21,"GRIMPER A LA CORDE",21,"GYMNASTIQUE",21,"GYMNASTIQUE ENTRETIEN",21,"HALTEROPHILIE",21,"HANDBALL",21,"HOCKEY SUR GAZON",21,"HOCKEY SUR GLACE",21,"INTERVIEW\/ RADIO\/TELE",21,"JU JITSU",21,"JUDO",21,"KARATE",21,"KENDO",21,"KIN-BALL",21,"LUTTE",21,"MOTOCYCLISME",21,"MULTISPORTS",21,"MUSCULATION",21,"NATATION",21,"NETTOYAGE",21,"PARACHUTISME",21,"PATINAGE SUR GLACE",21,"PETANQUE",21,"PLANCHE A VOILE",21,"PLONGEE SOUS MARINE",21,"PREPA.MANIF.",21,"RECEPTIONS\/FESTIVITES",21,"REUNIONS",21,"RINGUETTE",21,"ROLLER HOCKEY",21,"ROLLER SKATING",21,"RUGBY",21,"SAUNA",21,"SPELEOLOGIE",21,"SPORTS DE GLACE",21,"SPORTS SCOLAIRES",21,"SUBAQUATIQUE",21,"TAEKWONDO",21,"TAI DOH",21,"TAI JITSU",21,"TENNIS",21,"TENNIS DE TABLE",21,"TIR A L'ARC",21,"TIR A LA CIBLE",21,"TONFA",21,"TONFA",21,"TRAMPOLINE",21,"TRAVAUX",21,"TRIATHLON",21,"TWIRLING",21,"TX PAR ENTREPRISE",21,"ULTIMATE",21,"VETERANS",21,"VIET VO DAO",21,"VOILE",21,"VOLLEY BALL",21,"WATER-POLO",32,32,0,0,14,12,-1,33,12,-1,34,13,18952,44,50,4,32,32,0,0,14,12,-1,33,12,-1,34,13,264,45,50,4,32,32,0,0,14,12,-1,33,12,-1,34,13,264,46,50,4,32,32,0,0,14,12,-1,33,12,-1,34,13,264,47,30,3,48,50,5,34,13,392,40,21,"Choisissez un nouveau Lieu \u00E0 \u00E9diter ou cr\u00E9ez-en un",32,32,0,0,14,12,-1,33,12,-1,49,50,5,34,13,17672,40,20,0,32,32,0,0,14,12,-1,33,12,-1,25,50,6,37,30,1,50,26,3,0,1,2,34,13,17416,40,20,0,32,32,0,0,14,12,-1,33,12,-1,51,30,2,52,50,5,34,13,17672,40,20,0,32,32,0,0,14,12,-1,33,12,-1,24,50,5,37,30,1,53,21,"YES",32,32,31,5,21,"AIRES",21,"AIRES 2",21,"Tennis couverts",21,"ddd",21,"sss",25,"",14,12,-1,33,12,-1,34,13,16704,54,30,2,55,50,5,34,13,17800,40,20,0,32,32,0,0,14,12,-1,33,12,-1,56,50,5,37,30,4,57,30,2,58,32,21,"city",0,59,32,9,25,0,60,21,"parentIndex",61,9,25,62,21,"select",32,32,31,0,25,"",14,12,-1,33,12,-1,34,13,18112];
+
+        //console.log("===========================");
+        //console.log("========== Original Array =================");
+        //console.log("===========================");
+        var chain = JSON.stringify(encodedArray);
+        //console.log(chain);
+
+        //console.log("===========================");
+        //console.log("========== DECODE CHAIN TO OBJECT (isa: 'XVar' doesn't appear in log because it is part of ancestor chain, but it's there) =================");
+        //console.log("===========================");
+        function XVar() { };
+        MSTools.defineHiddenConstant(XVar.prototype, 'isa', 'XVar', true) ;
+        MSTools.defineInstanceMethods(XVar, {
+            toMSTEClass: function () { return "XVar"; }/*,
+            msteKeys: function () {
+                var array = [];
+                for (var key in this) {
+                    array.push(key);
+                }
+                return array;
+            }*/
+        }, true) ;
+
+        var r = MSTools.MSTE.parse(encodedArray, {
+            classes:
+                {
+                    XVar: XVar
+                }
+        }) ;
+
+        //console.log(jasmine.pp(r));
+
+
+
+        //console.log("===========================");
+        //console.log("========== ENCODE BACK TO ARRAY =================");
+        //console.log("===========================");
+        var encoder = new MSTools.MSTE.Encoder() ;
+        encoder.encodeObject(r) ;
+        var tokens = encoder.finalizeTokens() ;
+
+        //console.log(JSON.stringify(tokens));
+
+
+        //console.log("===========================");
+        //console.log("========== DECODE CHAIN TO OBJECT (2nd time) =================");
+        //console.log("===========================");
+        var finalVar = MSTools.MSTE.parse(tokens, {
+            classes:
+            {
+                XVar: XVar
+            }
+        }) ;
+
+
+        //console.log("FINAL:");
+        //console.log(jasmine.pp(finalVar));
+
+
+    });
+
+    /*
+    it("decodes a BIG CHAIN", function () {
+        var req = new XMLHttpRequest();
+        req.open('GET', '../code/MSTEString.json', false);
+        req.send(null);
+        if(req.status == 200) {
+            var PlanitecChain = req.responseText;
+        }
+
+        //var r = MSTools.MSTE.parse(PlanitecChain) ;
+
+
+        var decoder = new MSTools.MSTE.Decoder() ;
+
+        var r;
+        try {
+            r = decoder.parse(PlanitecChain) ;
+        } catch (e) {
+            console.log(e);
+            expect(true).toBe(false) ;
+            return;
+        }
+    });*/
+
+
+    it("encodes simple references (same ref is used multiple times: a person is father to one and married to another)", function () {
         var data = [{
             name: "Durand ¥-$-€",
             firstName: "Yves",
-            birthday: new Date()
+            birthday: new Date(1966,3,13,12,25,33)
         }, {
             name: "Durand",
             firstName: "Claire",
-            birthday: new Date()
+            birthday: new MSDate(1952,6,18,6,22,0)
         }, {
             name: "Durand",
             firstName: "Lou",
-            birthday: new Date()
+            birthday: new Date(1980,10,11,9,8,7)
         }];
 
         data[0]["maried_to"] = data[1];
@@ -240,24 +473,56 @@ describe("==========Tests MSTE protocol ========", function() {
         var m = MSTools.stringify(tokens) ;
         var r = MSTools.MSTE.parse(m) ;
 
+/*        console.log("initial data:") ;
+        console.log(jasmine.pp(data));
+        console.log("encoded data:") ;
+        console.log(jasmine.pp(m));
+        console.log("decoded data:") ;
+        console.log(jasmine.pp(r));           // ! jasmine.pp => a stringify that doesn't stop when encountering circular refs
+*/
+        expect(data).toEqual(r);
+
+    });
+
+    it("encodes simple references (same ref is used multiple times: a person is father to one and married to another) in 0x0101 version", function () {
+        var data = [{
+            name: "Durand ¥-$-€",
+            firstName: "Yves",
+            birthday: new Date(1966,3,13,12,25,33)
+        }, {
+            name: "Durand",
+            firstName: "Claire",
+            birthday: new MSDate(1952,6,18,6,22,0)
+        }, {
+            name: "Durand",
+            firstName: "Lou",
+            birthday: new Date(1980,10,11,9,8,7)
+        }];
+
+        data[0]["maried_to"] = data[1];
+        data[1]["maried_to"] = data[0];
+
+        data[2]["father"] = data[0];
+        data[2]["mother"] = data[1];
+
+
+        var encoder = new MSTools.MSTE.Encoder({version:0x0101}) ;
+        encoder.encodeObject(data) ;
+        var tokens = encoder.finalizeTokens() ;
+        var m = MSTools.stringify(tokens) ;
+        var r = MSTools.MSTE.parse(m /*, {debug:true}*/) ;
+
+        //console.log("initial data:") ;
         //console.log(jasmine.pp(data));
+        //console.log("encoded data:") ;
+        //console.log(jasmine.pp(m));
+        //console.log("decoded data:") ;
         //console.log(jasmine.pp(r));           // ! jasmine.pp => a stringify that doesn't stop when encountering circular refs
 
-		expect(r[0].name).toBe("Durand ¥-$-€") ;
-		expect(r[1].name).toBe("Durand") ;
-		expect(r[2].name).toBe("Durand") ;
-		expect(r[0].firstName).toBe("Yves") ;
-		expect(r[1].firstName).toBe("Claire") ;
-		expect(r[2].firstName).toBe("Lou") ;
-		expect(r[0].birthday.getUTCFullSeconds()).toBe(data[0].birthday.getUTCFullSeconds()) ; // dates are not strictly equals.
-		expect(r[1].birthday.getUTCFullSeconds()).toBe(data[1].birthday.getUTCFullSeconds()) ; // reference time is truncated to the
-		expect(r[2].birthday.getUTCFullSeconds()).toBe(data[2].birthday.getUTCFullSeconds()) ; // nearest second
-		expect(r[0]["maried_to"]).toBe(r[1]) ;
-		expect(r[1]["maried_to"]).toBe(r[0]) ;
-		expect(r[2].father).toBe(r[0]) ;
-		expect(r[2].mother).toBe(r[1]) ;
+        // beware : encoding in precedent version will gives you standard dates with no milliseconds ...
+		r[1].birthday = r[1].birthday.toMSDate() ;
 
-        expect($equals(data, r)).toBe(false);
+        expect(data).toEqual(r);
 
     });
 
@@ -280,7 +545,7 @@ describe("==========Tests MSTE protocol ========", function() {
 
 		var data = [
 			new LocalPerson("Durand ¥-$-€", "Yves", new Date()),
-			new LocalPerson("Durand", "Claire", new Date()),
+			new LocalPerson("Durand", "Claire", (new Date()).toMSDate()),
 			new LocalPerson("Durand", "Lou", new Date())
 		] ;
         data[0]["maried_to"] = data[1];
@@ -303,7 +568,7 @@ describe("==========Tests MSTE protocol ========", function() {
 		expect(r[1].isa).toBe('Person') ;
 		expect(r[2].isa).toBe('Person') ;
 
-        expect($equals(data, r)).toBe(true);
+        expect(data).toEqual(r);
 
     });
 
@@ -366,5 +631,52 @@ describe("==========Tests MSTE protocol ========", function() {
     it('array',        function() { test_mste("[\"MSTE0102\",11,\"CRC1258D06E\",0,0,31,2,21,\"First object\",21,\"Second object\"]", ["First object", "Second object"]); });
     it('couple',       function() { test_mste("[\"MSTE0102\",10,\"CRCF8392337\",0,0,32,21,\"First member\",21,\"Second member\"]", new MSCouple("First member", "Second member")); });
     it('repo',         function() { test_mste("[\"MSTE0102\",21,\"CRCD959E1CB\",0,3,\"20061\",\"entity\",\"0\",30,2,0,30,1,1,31,1,21,\"R_Right\",2,30,0]", { '20061' : { 'entity' : ['R_Right'] }, '0': []}); });
+
+	it("encodes simple references with a true class in 0x0101 version", function () {
+
+		function LocalPerson(n, f, d) {
+			this.name = n ;
+			this.firstName = f ;
+			this.birthday = d ;
+		}
+		MSTools.defineInstanceMethods(LocalPerson, {
+			isEqualTo:function(other, options) {
+				if (this === other) { return true ; }
+		        return $ok(other) && this.name === other.name && this.firstName === other.firstName && $equals(this.birthday, other.birthday, options) ? true : false ;
+
+			},
+			toMSTEClass:function() { return "person" ; }
+		}, true) ;
+		MSTools.defineHiddenConstant(LocalPerson.prototype,'isa', 'Person', true) ;
+
+		var data = [
+			new LocalPerson("Durand ¥-$-€", "Yves", new Date(1966,3,13,12,25,33)),
+			new LocalPerson("Durand", "Claire", new MSDate(1952,6,18,6,22,0)),
+			new LocalPerson("Durand", "Lou", new Date(1980,10,11,9,8,7))
+		] ;
+        data[0]["maried_to"] = data[1];
+        data[1]["maried_to"] = data[0];
+        data[2]["father"] = data[0];
+        data[2]["mother"] = data[1];
+
+        var encoder = new MSTools.MSTE.Encoder({version:0x0101}) ;
+        encoder.encodeObject(data) ;
+        var tokens = encoder.finalizeTokens() ;
+        var m = MSTools.stringify(tokens) ;
+        //console.log("encoded data:") ;
+        //console.log(jasmine.pp(m));
+        var r = MSTools.MSTE.parse(m, {
+			classes:{
+				person:LocalPerson
+			}
+		}) ;
+
+        // beware : encoding in precedent version will gives you standard dates with no milliseconds ...
+		r[1].birthday = r[1].birthday.toMSDate() ;
+
+
+        expect(r).toEqual(data);
+
+    });
 
 }) ;

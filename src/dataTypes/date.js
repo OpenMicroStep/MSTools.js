@@ -71,6 +71,7 @@ MSTools.defineInstanceMethods(Date, {
         }
         return $ok(other) && this.isa === other.isa && this.getUTCFullTime() === other.getUTCFullTime() ? true : false ;
     },
+    toNumber:function() { return Number(this) ; },
     toInt: function() {
         var year = this.getFullYear(), month = this.getMonth()+1, day = this.getDate() ;
         return (year < 0 ? -1 : 1) * (year < 0 ? -year : year) * 10000 + month * 100 + day ;
@@ -93,12 +94,13 @@ MSTools.defineInstanceMethods(Date, {
 }) ;
 
 MSTools.defineInstanceMethods(Date, {
-    toMSTE: function(encoder) {
-        //console.log("UTC milliseconds of date "+this+" is "+t) ;
+    toMSDate: function() {
+        return new MSDate(this.getFullYear(), this.getMonth()+1, this.getDate(), this.getHours(), this.getMinutes(), this.getSeconds()) ;
+    },
+    MSTEEncodeFullTimeWithCode: function(encoder, t, code) {
         var identifier = this[encoder.referenceKey] ;
         if ($ok(identifier)) { encoder.push(9) ; encoder.push(identifier) ; }
         else {
-            var t = this.getUTCFullTime() ;
             identifier = encoder.encodedObjects.length ;
             Object.defineProperty(this, encoder.referenceKey, {
                 enumerable:false,
@@ -107,10 +109,18 @@ MSTools.defineInstanceMethods(Date, {
                 value:identifier
             }) ;
             encoder.encodedObjects[identifier] = this ;
-            encoder.push(23) ;
-            encoder.push(t/1000) ; // can be a double
-            //console.log('Date '+this+" will encode as "+(t/1000));
+            encoder.push(code) ;
+            encoder.push(t) ; // can be a double
         }
+    },
+    toMSTE: function(encoder) {
+        if (encoder.version === 0x0101) {
+            var t = this.getUTCFullSeconds() ;
+            if (t >= Date.DISTANT_FUTURE) { encoder.push(25) ; }
+            else if ( t <= Date.DISTANT_PAST_TS) { encoder.push(24) ; }
+            else { this.MSTEEncodeFullTimeWithCode(encoder, t, 6) ; }
+        }
+        else { this.MSTEEncodeFullTimeWithCode(encoder, this.getUTCFullTime()/1000, 23) ; }
     }
 }, true) ;
 

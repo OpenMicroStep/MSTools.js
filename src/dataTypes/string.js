@@ -118,6 +118,7 @@ MSTools.defineMethods(String, {
 MSTools.defineInstanceMethods(String, {
     hasSuffix: function(str) { var r = new RegExp(str+"$") ; return (this.match(r) != null) ; },
     hasPrefix: function(str) { var r = new RegExp("^"+str) ; return (this.match(r) != null) ; },
+    toNumber:function() { return Number(this) ; },
     toInt: function(base) { base = base || 10 ; var v = parseInt(this, base) ; return (isNaN(v) ? 0 : v) ;},
     toJSON: function (key) { return this.valueOf(); },
     toColor: function() { return new MSColor(this) ; },
@@ -207,10 +208,7 @@ MSTools.defineInstanceMethods(String, {
     },
     // encoding numbers with adding properties is not longer possible
     // because adding properties to numbers is forbidden on some browsers
-    toMSTE:function(encoder) {
-        if (this.length === 0) { encoder.push(3) ; }
-        else { encoder.pushString(this) ; } // only push non empty strings on encoders...
-    },
+    toMSTE:function(encoder) { encoder.pushString(this) ; },
     hashCode:function() { return this.split("").reduce(function(a,b) { a = ((a<<5)-a)+b.charCodeAt(0); return a&a ; }, 0); }
 }, true) ;
 

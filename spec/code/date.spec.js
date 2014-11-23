@@ -86,7 +86,22 @@ describe("==========Tests du package date========", function() {
 	it("Testing valid date on 31/04/2014", function() {
         expect(MSDate.validDate(2014,04,31)).toBe(false);
     });
+    
+    it("Testing dates conversion", function() {
+        var d0 = new Date(1966,3,13, 12, 59, 01) ;
+        var d = new MSDate(1966,4,13, 12, 59, 01) ;
+        
+        var d1 = d.toDate() ;
+        expect(d1).toEqual(d0) ;
 
+        var d2 = d1.toMSDate() ;                
+        expect(d).toEqual(d2) ;
+        
+        var d3 = d2.toDate() ;        
+        expect(d3).toEqual(d0) ;
+        
+    }) ;
+    
 	it("Testing decimal Date value", function() {
 		expect(new Date(1966,3,13).toUInt()).toBe(19660413) ;
 		expect(new Date(1970,0,1).toUInt()).toBe(19700101) ;

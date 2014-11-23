@@ -219,18 +219,28 @@ MSTools.defineInstanceMethods(MSDate, {
     },
     toDate: function() {
         var c = this.components() ;
-        return c !== null ? new Date(c.year, c.month - 1, c.day, c.hour, c.minute, c.second, 0) : null ;
+        return $ok(c) ? new Date(c.year, c.month - 1, c.day, c.hour, c.minute, c.seconds, 0) : null ;
     },
     toJSON: function (key) {
         var d = this.toDate() ;
-        return d !== null ? d.toJSON(key) : null ;
+        return $ok(d) ? d.toJSON(key) : null ;
     },
     toArray: function() {
         var c = this.components() ;
-        return c != null ? [c.year, c.month, c.day, c.hour, c.minute, c.seconds, c.dayOfWeek] : null ;
+        return $ok(c) ? [c.year, c.month, c.day, c.hour, c.minute, c.seconds, c.dayOfWeek] : null ;
     },
     toMSTE: function(encoder) {
-        if (encoder.shouldPushObject(this)) {
+        if (encoder.version === 0x0101) {
+            // in 101 MSTE version, there is no MSDate so we convert to a Date() object before encoding
+            var t = this.toDate().getUTCFullSeconds() ;
+            if (t >= Date.DISTANT_FUTURE) { encoder.push(25) ; }
+            else if (t <= Date.DISTANT_PAST_TS) { encoder.push(24) ; }
+            else if (encoder.shouldPushObject(this)) {
+                encoder.push(6) ;
+                encoder.push(t) ;
+            }
+        }
+        else if (encoder.shouldPushObject(this)) {
             encoder.push(22) ;
             encoder.push(this.interval + MSDate.SecsFrom19700101To20010101) ;
         }

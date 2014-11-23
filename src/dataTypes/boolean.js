@@ -6,6 +6,7 @@ MSTools.defineHiddenConstant(Boolean.prototype,'isa', 'Boolean', true) ;
 
 // ================  instance methods =============
 MSTools.defineInstanceMethods(Boolean, {
+    toNumber:function() { return this ? 1 : 0 ; },
     toInt: function() { return this ? 1 : 0 ; },
     toUInt: function() { return this ? 1 : 0 ; },
     isEqualTo: function(other, options) {
@@ -16,7 +17,7 @@ MSTools.defineInstanceMethods(Boolean, {
 }) ;
 
 MSTools.defineInstanceMethods(Boolean, {
-    toMSTE: function(encoder) { encoder.push(this ? 1 : 2 ) ; }
+    toMSTE: function(encoder) { encoder.push(this ? 1 : 2 ) ; } // idem in 101 and 102 version
 }, true) ;
 
 if (MSTools.degradedMode) {

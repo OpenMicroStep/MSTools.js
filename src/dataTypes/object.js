@@ -18,6 +18,7 @@ if (!MSTools.degradedMode) {
     }) ;
     MSTools.defineInstanceMethods(Object, {
         valueForPath:function(path) { return MSTools.valueForPath(this, path) ; },
+        toNumber:function() { return NaN ; },
         toInt:function() { return this.toNumber().toInt() ; },
         toArray: function() { return [this] ; },
         toUInt:function(base) { return this.toInt().toUInt() ; }

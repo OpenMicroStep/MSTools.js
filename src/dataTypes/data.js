@@ -135,6 +135,9 @@ MSTools.defineInstanceMethods(MSData, {
         }
         return String.EMPTY_STRING ;
     },
+    toNumber:function() { return this.toString().toNumber() ; },
+    toInt:function() { return this.toNumber().toInt() ; },
+    toUInt:function(base) { return this.toInt().toUInt() ; },
     toBase64String: function(tokens, paddingChar) {
         var i, end, array, token ;
 
@@ -171,7 +174,7 @@ MSTools.defineInstanceMethods(MSData, {
     toMSTE: function(encoder) {
         if (this.length === 0) { encoder.push(4) ; }
         else if (encoder.shouldPushObject(this)) {
-            encoder.push(25) ;
+            encoder.push(encoder.version > 0x0101 ? 25 : 23) ;
             encoder.push(this.toBase64String()) ;
         }
     },

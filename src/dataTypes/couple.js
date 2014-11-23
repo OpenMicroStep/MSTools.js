@@ -20,11 +20,13 @@ MSTools.defineInstanceMethods(MSCouple, {
         if (this === other) { return true ; }
         return $ok(other) && this.isa === other.isa && $equals(this.firstMember, other.firstMember, options) && $equals(this.secondMember, other.secondMember, options)? true : false ;
     },
+    toInt:function() { return NaN ; },
+    toUInt:function(base) { return NaN ; },
     toArray: function() { return [this.firstMember, this.secondMember] ; },
     toMSTE: function(encoder) {
         if (encoder.shouldPushObject(this)) {
             var v, i, count = this.length ;
-            encoder.push(32) ;
+            encoder.push(encoder.version > 0x0101 ? 32 : 22) ;
             encoder.encodeObject(this.firstMember) ;
             encoder.encodeObject(this.secondMember) ;
         }
@@ -33,7 +35,6 @@ MSTools.defineInstanceMethods(MSCouple, {
 
 if (MSTools.degradedMode) {
     MSTools.defineInstanceMethods(Array, {
-        toInt:function() { return this.toNumber().toInt() ; },
-        toUInt:function(base) { return this.toInt().toUInt() ; }
+        toNumber:function() { return NaN ; }
     }) ;
 }
