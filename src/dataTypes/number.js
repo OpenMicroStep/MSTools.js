@@ -43,7 +43,7 @@ MSTools.defineInstanceMethods(Number, {
             throw "unsigned integer conversion impossible (not a number or number infinite)" ;
         }
     },
-    toJSON: function (key) { return this ; }
+    toJSON: function (key) { return this.valueOf() ; }
 }) ;
 
 MSTools.defineInstanceMethods(Number, {
