@@ -63,17 +63,19 @@ module.exports = function(grunt) {
             },
             dist: {
                 src: '<%= preprocess.dist.dest %>',
-                dest: 'dist/<%= pkg.name %>-<%= pkg.version %>.js'
+                dest: 'dist/<%= pkg.name %>.js'
             }
         },
 
-        min: {
+        uglify: {
             dist: {
-                src: '<%= concat.dist.dest %>',
-                dest: 'dist/<%= pkg.name %>-<%= pkg.version %>.min.js',
-                options: {
+                options : {
+                    ASCIIOnly: true,
+                    sourceMap: true,
                     banner: "<%= banner %>"
-                }
+                },
+                src: '<%= concat.dist.dest %>',
+                dest: 'dist/<%= pkg.name %>.min.js'
             }
         },
 
@@ -84,10 +86,11 @@ module.exports = function(grunt) {
                 vendor: [],
                 keepRunner: true
             },
-            dist: {
-                src: [
-                    '<%= preprocess.dist.dest %>'
-                ]
+            concat: {
+                src: ['<%= concat.dist.dest %>']
+            },
+            uglify: {
+                src: ['<%= uglify.dist.dest %>']
             }
         },
 
@@ -154,11 +157,14 @@ module.exports = function(grunt) {
         }
     });
 
+    grunt.registerTask('prebuild', ['replace', 'lint', 'clean']);
+    grunt.registerTask('postbuild', ['clean:tmp', 'notify:success']);
+
     grunt.registerTask('default', 'An alias task for build.', ['build']);
     grunt.registerTask('lint', 'Lints our sources', ['lintspaces', 'jshint']);
-    grunt.registerTask('test', 'Run the unit tests.', ['lint', 'preprocess:dist', 'jasmine:dist', 'clean:tmp']);
+    grunt.registerTask('test', 'Run the unit tests.', ['prebuild', 'concat', 'jasmine:concat', 'clean:tmp']);
    /* grunt.registerTask('dev', 'Auto-test while developing.', ['watch:dist']); */
-    grunt.registerTask('nodebuild', 'Build our library with jasmine node test.', ['replace', 'lint', 'clean', 'preprocess:dist', 'jasmine_node', 'concat', 'min', 'clean:tmp', 'notify:success']);
-    grunt.registerTask('build', 'Build our library.', ['replace', 'lint', 'clean', 'preprocess:dist', 'jasmine:dist', 'concat', 'min', 'clean:tmp', 'notify:success']);
-    grunt.registerTask('quickbuild', 'Build our library without time consuming jasmine tests and minifying.', ['replace', 'lint', 'clean', 'preprocess:debug', 'concat', 'clean:tmp', 'notify:success']);
+    grunt.registerTask('nodebuild', 'Build our library with jasmine node test.', ['prebuild', 'preprocess:dist', 'concat', 'jasmine_node', 'postbuild']);
+    grunt.registerTask('build', 'Build our library.', ['prebuild', 'preprocess:dist', 'concat', 'uglify', 'jasmine:concat', 'jasmine:uglify', 'postbuild']);
+    grunt.registerTask('quickbuild', 'Build our library without time consuming jasmine tests and minifying.', ['prebuild', 'preprocess:debug', 'concat', 'postbuild']);
 };
