@@ -1,8 +1,8 @@
-/*! MSTools - v0.0.2 - 2015-03-26 */
+/*! MSTools - v0.0.2 - 2015-10-06 */
 
 // we only add some functions into the main scope
 
-function $ok(self) { return self !== null && typeof self !== 'undefined' ; }
+function $ok(self) { return ((self === null || (typeof self) === 'undefined') ? false : true) ; }
 function $length(self) { return ((self === null || (typeof self) === 'undefined' || (typeof self.length) === 'undefined') ? 0 : self.length) ; }
 function $type(self) { var t ; return ((self === null || (t = (typeof self)) === 'undefined') ? null : (self.isa ? self.isa : t)) ; }
 
@@ -3897,7 +3897,7 @@ MSTools.defineInstanceMethods(MSData, {
         return array.join("") ;
     },
     toMSTE: function(encoder) {
-        if (this.length === 0) { encoder.push(6) ; }
+        if (this.length === 0) { encoder.push(4) ; }
         else if (encoder.shouldPushObject(this)) {
             encoder.push(25) ;
             encoder.push(this.toBase64String()) ;
@@ -4352,6 +4352,9 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                     break ;
 
                 case 9: // obsolete : compatibility state. weak reference to an object
+                    if (a[i] >= this.objects.length) {
+                        throw "Referenced object " + a[i] + " is out of bounds [0, " + this.objects.length + "[";
+                    }
                     value = this.objects[a[i++]] ;
                     hasValue =  true ;
                     state = -1 ;

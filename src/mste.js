@@ -210,6 +210,9 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                     break ;
 
                 case 9: // obsolete : compatibility state. weak reference to an object
+                    if (a[i] >= this.objects.length) {
+                        throw "Referenced object " + a[i] + " is out of bounds [0, " + this.objects.length + "[";
+                    }
                     value = this.objects[a[i++]] ;
                     hasValue =  true ;
                     state = -1 ;

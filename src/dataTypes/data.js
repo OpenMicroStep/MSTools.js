@@ -169,7 +169,7 @@ MSTools.defineInstanceMethods(MSData, {
         return array.join("") ;
     },
     toMSTE: function(encoder) {
-        if (this.length === 0) { encoder.push(6) ; }
+        if (this.length === 0) { encoder.push(4) ; }
         else if (encoder.shouldPushObject(this)) {
             encoder.push(25) ;
             encoder.push(this.toBase64String()) ;

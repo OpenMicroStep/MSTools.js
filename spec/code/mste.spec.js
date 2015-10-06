@@ -296,4 +296,16 @@ describe("==========Tests MSTE protocol ========", function() {
 
     });
 
+
+    it("bug: encode bug empty buffer", function() {
+        var data = new MSData();
+        var mste = MSTools.MSTE.stringify(data);
+        try {
+            var data0 = (new MSTools.MSTE.Decoder()).parse(mste) ;
+            expect($equals(data0, data)).toBe(true);
+        } catch (e) {
+            console.log(e);
+            expect(true).toBe(false) ;
+        }
+    });
 }) ;
