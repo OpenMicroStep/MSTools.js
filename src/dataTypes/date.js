@@ -16,11 +16,7 @@ MSTools.defineMethods(Date, {
     currentMonth:function() { return new Date().getMonth() ; },
     currentYear:function() { return new Date().getFullYear() ; },
     dateWithUTCTime:function(utc) {
-        var d, t ;
-        d = new Date(utc) ;
-        t = d.getTimezoneOffset() ;
-        if (t !== 0) { d.setTime(utc+t*60000) ; }
-        return d ;
+        return new Date(utc) ;
     },
     dateWithUTCSeconds:function(utc) { return this.dateWithUTCTime(1000*utc) ; },
     dateWithInt:function(decimalDate) {
@@ -39,8 +35,8 @@ MSTools.defineMethods(Date, {
 
 
 MSTools.defineInstanceMethods(Date, {
-    getUTCFullSeconds: function() { return $div(this.getTime(), 1000) - this.getTimezoneOffset()*60 ; },
-    getUTCFullTime: function() { return this.getTime() - this.getTimezoneOffset()*60000 ; },
+    getUTCFullSeconds: function() { return $div(this.getTime(), 1000) ; },
+    getUTCFullTime: function() { return this.getTime(); },
     dateWithoutTime: function() { var utc = this.getUTCFullTime() ; return Date.dateWithUTCTime(utc - (utc % 86400000)) ; },
     isLeap: function() { return MSDate.isLeapYear(this.getFullYear()) ; },
     shiftSeconds: function(s) { this.setTime(this.getTime()+s*1000) ; },

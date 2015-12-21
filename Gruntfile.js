@@ -50,6 +50,7 @@ module.exports = function(grunt) {
                 },
                 files: [
                     {
+                        expand: true,
                         src: 'src/**/*.js',
                         dest: './'
                     }
@@ -81,10 +82,7 @@ module.exports = function(grunt) {
 
         jasmine: {
             options: {
-                helpers: [],
                 specs: 'spec/code/**/*.spec.js',
-                vendor: [],
-                keepRunner: true
             },
             concat: {
                 src: ['<%= concat.dist.dest %>']
@@ -94,17 +92,11 @@ module.exports = function(grunt) {
             }
         },
 
-        jasmine_node: {
-            options: {
-                forceExit: true,
-                match: '.',
-                matchall: false,
-                extensions: 'js',
-                specNameMatcher: 'spec'
-            },
-            all: ['spec/code/']
+        jasmine_nodejs: {
+            dist: {
+                specs: 'spec/code/**/*.spec.js',
+            }
         },
-
 
         jshint: {
             options: {
@@ -164,5 +156,5 @@ module.exports = function(grunt) {
     grunt.registerTask('lint', 'Lints our sources', ['lintspaces']);
     grunt.registerTask('test', 'Run the unit tests.', ['prebuild', 'jasmine:concat', 'clean:tmp']);
    /* grunt.registerTask('dev', 'Auto-test while developing.', ['watch:dist']); */
-    grunt.registerTask('build', 'Build our library.', ['prebuild', 'uglify', 'jasmine:concat', 'jasmine:uglify', 'jasmine_node', 'postbuild']);
+    grunt.registerTask('build', 'Build our library.', ['prebuild', 'uglify', 'jasmine_nodejs:dist', 'jasmine:concat', 'jasmine:uglify', 'postbuild']);
 };

@@ -72,6 +72,7 @@ MSTools.MSTE.Decoder = function(options) {
     }
     if ($ok(options)) {
         this.correspondances = options.classes ;
+        this.checkCRC = !!options.crc;
     }
 } ;
 
@@ -94,14 +95,14 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
 
 
         n = $length(a) ;
-        if (n < 4) { throw "Unable to decode MSTE Source : two few tokens" ; }
+        if (n < 4) { throw new Error("Unable to decode MSTE Source : two few tokens") ; }
 
         this.count = a[1].toUInt() ;
-        if (this.count !== n ) { throw "Unable to decode MSTE Source : bad control count" ;}
+        if (this.count !== n ) { throw new Error("Unable to decode MSTE Source : bad control count") ;}
 
         v = a[0] ;
         if (!v.hasPrefix('MSTE') || (v = this.supportedVersions.indexOf(parseInt(v.slice(4),16))) === -1) {
-            throw "Unable to decode MSTE Source : bad version "+this.tokens[0] ;
+            throw new Error("Unable to decode MSTE Source : bad version "+this.tokens[0]) ;
         }
 
         this.engine = MSTools.MSTE.ENGINES[v] ;
@@ -109,13 +110,19 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
         //console.log('version = MSTE'+this.engine.version.toHexa(4)) ;
 
         this.crc = a[2] ;
+        if (this.checkCRC) {
+            var crc = "CRC" + MSTools.crc32(source.replace(this.crc, "CRC00000000")).toHexa(8).toUpperCase();
+            if (crc !== this.crc) {
+                throw new Error("Unable to decode MSTE source: crc doesn't match " + crc + " != " + this.crc);
+            }
+        }
 
         cn = a[3].toUInt() ;
-        if (5 + cn > n) { throw "Unable to decode MSTE Source : not enough tokens to store classes and a stream" ;}
+        if (5 + cn > n) { throw new Error("Unable to decode MSTE Source : not enough tokens to store classes and a stream") ;}
         for (i = 0 ; i < cn ; i++) { this.classes[i] = a[4+i] ; }
 
         kn = a[4+cn].toUInt() ;
-        if (6 + cn + kn > n) { throw "Unable to decode MSTE Source : not enough tokens to store a stream" ;}
+        if (6 + cn + kn > n) { throw new Error("Unable to decode MSTE Source : not enough tokens to store a stream") ;}
 
         for (i = 0 ; i < kn ; i++) { this.keys[i] = a[5+cn+i] ; }
 
@@ -184,7 +191,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                     futureClass = null ;
                     code = a[i++] ;
                     if (!engine.validCode(code)) {
-                        throw "Unable to decode MSTE token with code "+code ;
+                        throw new Error("Unable to decode MSTE token with code "+code);
                     }
                     else if (code >= engine.classCode) {
                         futureClass = this.classes[engine.getClassIndex(code)] ;
@@ -211,7 +218,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
 
                 case 9: // obsolete : compatibility state. weak reference to an object
                     if (a[i] >= this.objects.length) {
-                        throw "Referenced object " + a[i] + " is out of bounds [0, " + this.objects.length + "[";
+                        throw new Error("Referenced object " + a[i] + " is out of bounds [0, " + this.objects.length + "[");
                     }
                     value = this.objects[a[i++]] ;
                     hasValue =  true ;
@@ -340,7 +347,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
 
                 default:
                     //console.log("Bad state encoutered during parsing") ;
-                    throw 'Bad state encoutered during parsing' ;
+                    throw new Error('Bad state encoutered during parsing');
             }
             if (hasValue) {
 
@@ -368,7 +375,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
                         currentState.o.secondMember = value ;
                         break ;
                     default:
-                        throw "Bad currentState : "+currentState.s ;
+                        throw new Error("Bad currentState : "+currentState.s);
                 }
                 currentState.i++ ;
                 if (currentState.i === currentState.n) {
@@ -391,8 +398,8 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
             }
         }
         //console.log('---- MSTE automat final state : '+state+' stack depth : '+stack.length+'--------------------------') ;
-        if (state !== -1)    { throw "Bad final state "+state ; }
-        if (stack.length > 0) { throw "Bad final stack with current stack state "+stack.lastObject().s ; }
+        if (state !== -1)    { throw new Error("Bad final state "+state) ; }
+        if (stack.length > 0) { throw new Error("Bad final stack with current stack state "+stack.lastObject().s) ; }
     }
 }, true) ;
 
@@ -540,7 +547,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Encoder,
                     // object standard loop
                     // //console.log('will encode object '+MSTools.stringify(o)) ;
                     for (k in o) {
-                        if (k.length && k.charAt(0) >= 'A') {
+                        if (o.hasOwnProperty(k)) {
                             v = o[k] ; t = typeof v ;
                             if (v === null) {
                                 total ++ ;
@@ -587,7 +594,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Encoder,
         this.stringsIndexes = {} ;
         this.numbersIndexes = {} ;
     },
-    encodeException:function(o) { throw "Impossible to encode object of class "+this.className() ; },
+    encodeException:function(o) { throw new Error("Impossible to encode object of class "+this.className()) ; },
     toMSTE:function(encoder) { encoder.encodeException(this) ; }
 }, true) ;
 
@@ -596,7 +603,7 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Encoder,
 MSTools.MSTE.parse = function(source, options) {
     var r = null ;
     if (!$length(source)) {
-        throw "MSTE source string is empty";
+        throw new Error("MSTE source string is empty");
     }
     var decoder = new MSTools.MSTE.Decoder(options) ;
     return decoder.parse(source) ;
@@ -615,5 +622,7 @@ MSTools.MSTE.tokenize = function(rootObject) {
 } ;
 
 MSTools.MSTE.stringify = function(rootObject) {
-    return MSTools.stringify(this.tokenize(rootObject));
+    var s = MSTools.stringify(this.tokenize(rootObject));
+    var crc = MSTools.crc32(s).toHexa(8).toUpperCase();
+    return s.replace("CRC00000000", "CRC" + crc);
 } ;

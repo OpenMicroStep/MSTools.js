@@ -834,34 +834,34 @@ describe("==========Tests du package string========", function() {
 	    'ᵥ','v',
 	    'ₓ','x'
 ];
-	
+
 	it("Testing toASCII() on first 65533 unicode characters", function() {
 		var c, allchars = [], s,r ;
-		
+
 		function _isAscii(s) {
 			var i, l = s.length, c, n = 0 ;
 			for (i = 0 ; i < l ; i++) {
-				c = s.charCodeAt(i) ; 
+				c = s.charCodeAt(i) ;
 				if (c > 0x7f && c !== 0xfffd) {
 					console.log('Character unicode "'+String.fromCharCode(c)+'" ('+c+') at position '+i) ;
-					n++ ; 
+					n++ ;
 				}
 			}
-			return n > 0 ? false : true ; 
+			return n > 0 ? false : true ;
 		}
-		
+
 		for (c = 0 ; c < 65533 ; c ++) { allchars.push(String.fromCharCode(c)) ; }
 		s = allchars.join('').toASCII("\ufffd") ;
 		expect(_isAscii(s)).toBe(true);
 	}) ;
 	it("Testing toASCII() method with other conversion table", function() {
-		var i, count = testDiacritics.length ;	
+		var i, count = testDiacritics.length ;
         expect(typeof String.prototype.toASCII).toBe("function");
 		for (i = 0 ; i < count ; i += 2) {
 			var rac = MSTools.stringify(testDiacritics[i]) ;
 	        expect(rac+' '+testDiacritics[i].toASCII()).toBe(rac+' '+testDiacritics[i+1]);
 		}
-    });					
+    });
 
 	it("Testing toASCII() method with a vietnamese text", function() {
 		expect("Mọi người đều có quyền tự do ngôn luận và bầy tỏ quan điểm".toASCII()).toBe("Moi nguoi deu co quyen tu do ngon luan va bay to quan diem") ;
@@ -880,13 +880,13 @@ describe("==========Tests du package string========", function() {
 			"Marek jest w galerii sztuki. On stoi przy ścianie i patrzy na obraz. Marek patrzy na obraz od kilku minut. Obraz wisi na ścianie. Obok obrazu wiszą tabliczki z informacją. Jedna tabliczka jest po polsku a druga jest po angielsku. Ściana jest biała a obraz jest kolorowy. Na obrazie są: niebieskie niebo, szare chmury i zielona łąka pokryta kolorowymi plamami. Kolorowe plamy to kwiaty. Kwiaty są wszędzie i mają różne kolory: czerwony, żółty, pomarańczowy, fioletowy i różowy. Pośrodku łąki rośnie drzewo. Drzewo jest duże i stare. Pod drzewem stoją małe dzieci, dziewczynka i chłopiec. Dzieci patrzą na drzewo. Na drzewie siedzi kot. Kot patrzy na dzieci.".toASCII()).toBe(
 			"Marek jest w galerii sztuki. On stoi przy scianie i patrzy na obraz. Marek patrzy na obraz od kilku minut. Obraz wisi na scianie. Obok obrazu wisza tabliczki z informacja. Jedna tabliczka jest po polsku a druga jest po angielsku. Sciana jest biala a obraz jest kolorowy. Na obrazie sa: niebieskie niebo, szare chmury i zielona laka pokryta kolorowymi plamami. Kolorowe plamy to kwiaty. Kwiaty sa wszedzie i maja rozne kolory: czerwony, zolty, pomaranczowy, fioletowy i rozowy. Posrodku laki rosnie drzewo. Drzewo jest duze i stare. Pod drzewem stoja male dzieci, dziewczynka i chlopiec. Dzieci patrza na drzewo. Na drzewie siedzi kot. Kot patrzy na dzieci.") ;
 	});
-			
+
 	it("Testing toASCII() method with long danish lirics", function() {
 		expect(
 			"Der er et yndigt land, det står med brede bøge nær salten østerstrand :| Det bugter sig i bakke, dal, det hedder gamle Danmark og det er Frejas sal :| Der sad i fordums tid de harniskklædte kæmper, udhvilede fra strid :| Så drog de frem til fjenders mén, nu hvile deres bene bag højens bautasten :| Det land endnu er skønt, thi blå sig søen bælter, og løvet står så grønt :| Og ædle kvinder, skønne møer og mænd og raske svende bebo de danskes øer :| Hil drot og fædreland! Hil hver en danneborger, som virker, hvad han kan! :| Vort gamle Danmark skal bestå, så længe bøgen spejler sin top i bølgen blå :|".toASCII()).toBe(
 			"Der er et yndigt land, det star med brede boge naer salten osterstrand :| Det bugter sig i bakke, dal, det hedder gamle Danmark og det er Frejas sal :| Der sad i fordums tid de harniskklaedte kaemper, udhvilede fra strid :| Sa drog de frem til fjenders men, nu hvile deres bene bag hojens bautasten :| Det land endnu er skont, thi bla sig soen baelter, og lovet star sa gront :| Og aedle kvinder, skonne moer og maend og raske svende bebo de danskes oer :| Hil drot og faedreland! Hil hver en danneborger, som virker, hvad han kan! :| Vort gamle Danmark skal besta, sa laenge bogen spejler sin top i bolgen bla :|") ;
 	});
-    
+
 	// never '===' on date objects. it fails
 	it("Testing parseDate() method", function() {
 		expect("01/01/2001".parseDate().toInt()).toBe(20010101) ;
@@ -916,5 +916,5 @@ describe("==========Tests du package string========", function() {
 		s = String.stringWithUTF8Data(d) ;
 		expect(s).toBe(us) ; // testing encoding / decoding UTF8
 	});
-	
+
 }) ;
