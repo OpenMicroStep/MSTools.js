@@ -52,34 +52,34 @@ describe("==========Tests du package date========", function() {
 		expect(d.minuteOfHour()).toEqual(0) ;
 		expect(d.secondOfMinute()).toEqual(0) ;
 	}) ;
-		
+
 	it("Testing valid date on 29/02/0", function() {
         expect(MSDate.validDate(0,2,29)).toBe(false);
-    });				
+    });
 	it("Testing valid date on 29/02/04", function() {
         expect(MSDate.validDate(4,2,29)).toBe(false);
-    });				
+    });
 	it("Testing valid date on 29/02/8", function() {
         expect(MSDate.validDate(8,2,29)).toBe(true);
-    });				
+    });
 	it("Testing valid date on 29/02/1200", function() {
         expect(MSDate.validDate(1200,2,29)).toBe(false);
-    });				
+    });
 	it("Testing valid date on 29/02/1600", function() {
         expect(MSDate.validDate(1600,2,29)).toBe(true);
-    });				
+    });
 	it("Testing valid date on 29/02/1900", function() {
         expect(MSDate.validDate(1900,2,29)).toBe(false);
-    });				
+    });
 	it("Testing valid date on 29/02/2000", function() {
         expect(MSDate.validDate(2000,2,29)).toBe(true);
-    });				
+    });
 	it("Testing valid date on 29/02/2012", function() {
         expect(MSDate.validDate(2012,2,29)).toBe(true);
-    });				
+    });
 	it("Testing valid date on 29/02/2013", function() {
         expect(MSDate.validDate(2013,2,29)).toBe(false);
-    });				
+    });
 	it("Testing valid date on 29/02/2014", function() {
         expect(MSDate.validDate(2014,2,29)).toBe(false);
     });
@@ -99,4 +99,11 @@ describe("==========Tests du package date========", function() {
 		expect(new MSDate(0).toUInt()).toBe(20010101) ;
 		expect(new MSDate(2002,07,06).toUInt()).toBe(20020706) ;
 	}) ;
+
+    it("Testing MSDate creation from Date", function() {
+        var ms = new MSDate(new Date(2015,9,14));
+        expect(ms.dayOfMonth()).toBe(14);
+        expect(ms.monthOfYear()).toBe(10);
+        expect(ms.yearOfCommonEra()).toBe(2015);
+    });
 }) ;

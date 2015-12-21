@@ -37,7 +37,7 @@ function MSDate()
     }
     else { tmp = new Date() ; }
 
-    this.interval = MSDate.intervalFrom(tmp.getFullYear(), tmp.getMonth()+1, tmp.getDay(), tmp.getHours(), tmp.getMinutes(), tmp.getSeconds()) ;
+    this.interval = MSDate.intervalFrom(tmp.getFullYear(), tmp.getMonth()+1, tmp.getDate(), tmp.getHours(), tmp.getMinutes(), tmp.getSeconds()) ;
 }
 
 // ================ constants ====================
