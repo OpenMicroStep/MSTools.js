@@ -13,10 +13,7 @@ MSTools.defineHiddenConstant = function(target, constant, value, force) { _defin
 MSTools.defineHiddenConstants = function(target, constants, force) { for (var key in constants) { _defineConstant(target, key, false, constants[key], force) ; }} ;
 
 MSTools.defineMethod = function(target, method, fn, force) {
-    if ($ok(target) && (force || !target.hasOwnProperty(method) || (typeof target[method] !== 'function'))) {
-        //console.log('will add method '+method+' to object class '+target.isa) ;
-        Object.defineProperty(target, method, { enumerable:false, configurable:false, writable:false, value:fn}) ;
-    }
+    _defineConstant(target, method, false, fn, force);
 } ;
 
 MSTools.defineMethods = function(target, methods, force) { for (var key in methods) { MSTools.defineMethod(target, key, methods[key], force) ; }} ;

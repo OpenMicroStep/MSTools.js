@@ -4,8 +4,6 @@
 */
 
 (function () {
-    'use strict';
-
 
     // escapable was modified from initial json2.js in order to escape all control characters and all characters with diacritics signs
     var escapable = /[\\\"\x00-\x1f\u007f-\uffff]/g,

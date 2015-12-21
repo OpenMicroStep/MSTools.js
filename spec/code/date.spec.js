@@ -1,5 +1,5 @@
 if (typeof module !== 'undefined' && module.exports) {  // On Node.js
-    require("../../tmp/MSTools");
+  var MSDate = require("../../tmp/MSTools").MSDate;
 }
 
 describe("==========Tests du package date========", function() {

@@ -11,21 +11,10 @@
     "eqnull": true,
     "browser": true,
     "globals": {
-        "MSTools": true,
         "console": true,
-		"$ok": true,
-		"$length" : true,
-		"$div" : true,
-		"$equals" : true,
+        "define": true,
         "module": true,
-        "exports": true,
-        "MSColor": true,
-        "MSArray": true,
-        "MSDate": true,
-        "MSData": true,
-        "MSNaturalArray": true,
-        "MSCouple": true,
-        "GLOBAL": true,         // Node.js global obj
-        "Ext": true
+        "global": true,
+        "MSData": true
     }
 }

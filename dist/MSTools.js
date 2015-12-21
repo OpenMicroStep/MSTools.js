@@ -1,20 +1,18 @@
-/*! MSTools - v0.0.2 - 2015-10-06 */
+/*! MSTools - v0.0.3 - 2015-12-21 */
 
 // we only add some functions into the main scope
 
-function $ok(self) { return ((self === null || (typeof self) === 'undefined') ? false : true) ; }
-function $length(self) { return ((self === null || (typeof self) === 'undefined' || (typeof self.length) === 'undefined') ? 0 : self.length) ; }
-function $type(self) { var t ; return ((self === null || (t = (typeof self)) === 'undefined') ? null : (self.isa ? self.isa : t)) ; }
-
-function $div(a, b) { return (a/b /* / keep that commentary here please */) | 0 ; }
-function $equals(a, b, opts) { return $ok(a) ? ($ok(b) ? a.isEqualTo(b, opts) : false) : ($ok(b) ? false : a === b) ; }
-
-var MSTools = (function(global) {
+(function() {
     "use strict";
 
-    var MSTools = {
+    function $ok(self) { return ((self === null || (typeof self) === 'undefined') ? false : true) ; }
+    function $length(self) { return ((self === null || (typeof self) === 'undefined' || (typeof self.length) === 'undefined') ? 0 : self.length) ; }
+    function $type(self) { var t ; return ((self === null || (t = (typeof self)) === 'undefined') ? null : (self.isa ? self.isa : t)) ; }
 
-    };
+    function $div(a, b) { return (a/b /* / keep that commentary here please */) | 0 ; }
+    function $equals(a, b, opts) { return $ok(a) ? ($ok(b) ? a.isEqualTo(b, opts) : false) : ($ok(b) ? false : a === b) ; }
+
+    var MSTools = {};
 
     var __localUniqueID = 0 ;
     MSTools.localUniqueID = function() { return '$mst'+ (++__localUniqueID) ; } ;
@@ -101,10 +99,7 @@ var MSTools = (function(global) {
     MSTools.defineHiddenConstants = function(target, constants, force) { for (var key in constants) { _defineConstant(target, key, false, constants[key], force) ; }} ;
     
     MSTools.defineMethod = function(target, method, fn, force) {
-        if ($ok(target) && (force || !target.hasOwnProperty(method) || (typeof target[method] !== 'function'))) {
-            //console.log('will add method '+method+' to object class '+target.isa) ;
-            Object.defineProperty(target, method, { enumerable:false, configurable:false, writable:false, value:fn}) ;
-        }
+        _defineConstant(target, method, false, fn, force);
     } ;
     
     MSTools.defineMethods = function(target, methods, force) { for (var key in methods) { MSTools.defineMethod(target, key, methods[key], force) ; }} ;
@@ -3133,6 +3128,1402 @@ var MSTools = (function(global) {
         }) ;
     }
     
+    // ================ class interface ====================
+    function MSDate()
+    {
+        var n = arguments.length, tmp ;
+        if (n >= 3) {
+            var i ;
+            if (!MSDate.validDate(arguments[0], arguments[1], arguments[2])) { throw "Bad MSDate() day arguments" ; }
+            if (n !== 3 && n !== 6 ) { throw "Impossible to initialize a new MSDate() with "+n+" arguments" ; }
+            if (n === 6) {
+                if (!MSDate.validTime(arguments[3], arguments[4], arguments[5])) { throw "Bad MSDate() time arguments" ; }
+                this.interval = MSDate.intervalFrom(arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5] | 0) ;
+            }
+            else {
+                this.interval = MSDate.intervalFrom(arguments[0], arguments[1], arguments[2], 0, 0, 0) ;
+            }
+            return ;
+        }
+        else if (n === 2) { throw "Impossible to initialize a new MSDate() with 2 arguments" ; }
+        else if (n === 1) {
+            var t = arguments[0] ;
+            if ($ok(t)) {
+                switch (t.isa) {
+                    case 'Date': tmp = t ; break ;
+                    case 'MSDate': this.interval = t.interval ; return ;
+                    case 'Number':
+                        if (!Number.isInteger(t)) { throw "Impossible to initialize a new MSDate() with a non integer number" ; }
+                        this.interval = t ;
+                        return ;
+                    default:
+                        t = Number(t) ;
+                        if (!Number.isInteger(t)) { throw "Impossible to initialize a new MSDate() with a non integer number representation" ; }
+                        this.interval = t ;
+                        return ;
+                }
+            }
+            else { tmp = new Date() ; }
+        }
+        else { tmp = new Date() ; }
+    
+        this.interval = MSDate.intervalFrom(tmp.getFullYear(), tmp.getMonth()+1, tmp.getDate(), tmp.getHours(), tmp.getMinutes(), tmp.getSeconds()) ;
+    }
+    
+    // ================ constants ====================
+    MSTools.defineHiddenConstants(MSDate,{
+        DaysFrom00000229To20010101:730792,
+        DaysFrom00010101To20010101:730485,
+        SecsFrom00010101To20010101:63113904000,
+        SecsFrom19700101To20010101:978307200,
+        DaysInMonth:[0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
+        DaysInPreviousMonth:[0, 0, 0, 0, 31, 61, 92, 122, 153, 184, 214, 245, 275, 306, 337]
+    }, true) ;
+    MSTools.defineHiddenConstant(MSDate.prototype,'isa', 'MSDate', true) ;
+    
+    // ================= class methods ===============
+    MSTools.defineMethods(MSDate, {
+        isLeapYear:function(y) { return (y % 4 ? false : ( y % 100 ? (y > 7 ? true : false) : (y % 400 || y < 1600 ? false : true))) ; },
+        validDate:function(year, month, day) {
+            if (!Number.isInteger(day) || !Number.isInteger(month) || !Number.isInteger(year) || day < 1 || month < 1 || month > 12) { return false ; }
+            if (day > MSDate.DaysInMonth[month]) { return (month === 2 && day === 29 && MSDate.isLeapYear(year)) ? true : false ; }
+            return true ;
+        },
+        validTime:function(hour, minute, second) {
+            return (Number.isInteger(hour) && Number.isInteger(minute) && !isNaN(second) && hour >= 0 && hour < 24 && minute >= 0 && minute < 60 && second >= 0 && second < 60) ? true : false ;
+        },
+        intervalFromYMD:function(year, month, day) {
+            var leaps ;
+            month = 0 | month ;
+            if (month < 3) { month += 12; year--; }
+    
+            leaps = Math.floor(year/4) - Math.floor(year/100) + Math.floor(year/400);
+    
+            return Math.floor((day + MSDate.DaysInPreviousMonth[month] + 365 * year + leaps - MSDate.DaysFrom00000229To20010101) * 86400) ;
+        },
+        intervalFrom:function(year, month, day, hours, minutes, seconds) {
+            return MSDate.intervalFromYMD(year, month, day) + hours * 3600 + minutes * 60 + seconds ;
+        },
+        timeFromInterval:function(t) { return ((t+MSDate.SecsFrom00010101To20010101) % 86400) ; },
+        dayFromInterval:function(t) { return Math.floor((t - MSDate.timeFromInterval(t))/86400) ; },
+        secondsFromInterval:function(t) { return ((t+MSDate.SecsFrom00010101To20010101) % 60) ; },
+        minutesFromInterval:function(t) { return $div(Math.floor((t+MSDate.SecsFrom00010101To20010101) %  3600),  60) ; },
+        hoursFromInterval:function(t) { return $div(Math.floor((t+MSDate.SecsFrom00010101To20010101) %  86400),  3600) ; },
+        dayOfWeekFromInterval:function(t, offset) {
+            offset = offset || 0 ;
+            return (MSDate.dayFromInterval(t)+MSDate.DaysFrom00010101To20010101 + 7 - (offset % 7)) % 7;
+        },
+        componentsWithInterval:function(interval) {
+            var ret, Z, gg, CENTURY, CENTURY_MQUART, ALLDAYS, Y, Y365, DAYS_IN_Y, MONTH_IN_Y ;
+    
+            Z =                  MSDate.dayFromInterval(interval) + MSDate.DaysFrom00000229To20010101 ;
+            gg =                 Z - 0.25 ;
+            CENTURY =            Math.floor(gg/36524.25) ;
+            CENTURY_MQUART =     CENTURY - Math.floor(CENTURY/4) ;
+            ALLDAYS =            gg + CENTURY_MQUART ;
+            Y =                  Math.floor(ALLDAYS / 365.25) ;
+            Y365 =               Math.floor(Y * 365.25) ;
+            DAYS_IN_Y =          CENTURY_MQUART + Z - Y365 ;
+            MONTH_IN_Y =         Math.floor((5 * DAYS_IN_Y + 456)/153) ;
+    
+            ret = {
+                day:Math.floor(DAYS_IN_Y - Math.floor((153*MONTH_IN_Y - 457) / 5)),
+                hour:MSDate.hoursFromInterval(interval),
+                minute:MSDate.minutesFromInterval(interval),
+                seconds:MSDate.secondsFromInterval(interval),
+                dayOfWeek:((Z + 2) % 7)
+            } ;
+    
+            if (MONTH_IN_Y > 12) {
+                ret.month = MONTH_IN_Y - 12 ;
+                ret.year = Y + 1 ;
+            }
+            else {
+                ret.month = MONTH_IN_Y ;
+                ret.year = Y ;
+            }
+            return ret ;
+        },
+        dateWithInt:function(decimalDate) {
+            if ($ok(decimalDate)) {
+                decimalDate = decimalDate.toInt() ;
+                var day = decimalDate % 100 ;
+                var month = $div((decimalDate % 10000),100) ;
+                var year = $div(decimalDate, 10000) ;
+                if (MSDate.validDate(year, month, day)) { return new MSDate(year, month, day) ; }
+            }
+            return null ;
+        },
+        _lastDayOfMonth:function(year,month) { return (month === 2 && MSDate.isLeapYear(year)) ? 29 : MSDate.DaysInMonth[month]; }, // not protected. use carrefully
+        _yearRef:function(y, offset) {
+            var firstDayOfYear = MSDate.intervalFromYMD(y, 1, 1),
+                d = MSDate.dayOfWeekFromInterval(firstDayOfYear, offset) ;
+    
+            d = (d <= 3 ? -d : 7-d ); // Day of the first week
+            return firstDayOfYear + d * 86400 ;
+        }
+    }, true) ;
+    // ================  instance methods =============
+    MSTools.defineInstanceMethods(MSDate, {
+        components: function() { return MSDate.componentsWithInterval(this.interval) ; },
+        valueOf: function() { return this.interval ; },
+        toNumber: function() { return this.interval ; },
+        toString: function() { // returns the ISO 8601 representation without any timezone
+            function f(n) { return n < 10 ? '0' + n : n; } // Format integers to have at least two digits.
+    
+            var c = this.components() ;
+            return ($ok(c) ?
+                    c.year + '-' +
+                    f(c.month) + '-' +
+                    f(c.day) + 'T' +
+                    f(c.hour)     + ':' +
+                    f(c.minute)   + ':' +
+                    f(c.seconds)
+                : null);
+        },
+        isEqualTo: function(other, options) {
+            if (this === other) { return true ; }
+            if ($ok(other)) {
+                if (this.isa === other.isa && this.interval === other.interval) { return true ; }
+                // should we equals to normal javascript dates ?
+            }
+            return false ;
+        },
+        isLeap: function() { var c = this.components() ; return c !== null ? MSDate.isLeapYear(c.year) : false ; },
+    
+        yearOfCommonEra:function() { var c = this.components() ; return c !== null ? c.year : NaN ; },
+    
+        monthOfYear:function() { var c = this.components() ; return c !== null ? c.month : NaN ; },
+        weekOfYear:function(offset) {
+            // In order to follow ISO 8601 week begins on monday and must have at
+            // least 4 days (i.e. it must includes thursday)
+            var reference, w, c = this.components() ; if (c === null) { return NaN ; }
+            offset = offset || 0 ;
+            offset %= 7;
+    
+            reference = MSDate._yearRef(c.year, offset) ;
+            if (this.interval < reference) { // De l'année d'avant
+                reference = MSDate._yearRef(c.year - 1, offset);
+                w = Math.floor((this.interval - reference) / (86400*7)) + 1 ;
+            }
+            else {
+                w = Math.floor((this.interval - reference) / (86400*7)) + 1 ;
+                if (w === 53) {
+                    reference += 52 * 7 * 86400 ;
+                    c = MSDate.componentsWithInterval(reference) ;
+                    if (c.day >= 29) { w = 1 ; }
+                }
+            }
+            return w ;
+        },
+        dayOfYear:function() {
+            var c = this.components() ; if (c === null) { return NaN ; }
+            return Math.floor((this.interval - MSDate.intervalFromYMD(c.year, 1, 1))/86400)+1 ;
+        },
+    
+        dayOfMonth:function() { var c = this.components() ; return c !== null ? c.day : NaN ; },
+        lastDayOfMonth:function() { var c = this.components() ; return c !== null ? MSDate._lastDayOfMonth(c.year, c.month) : NaN ; },
+    
+        dayOfWeek:function(offset) { return MSDate.dayOfWeekFromInterval(this.interval, offset) ; },
+    
+        hourOfDay:function() { return MSDate.hoursFromInterval(this.interval) ; },
+        secondOfDay:function() { return MSDate.timeFromInterval(this.interval) ; },
+    
+        minuteOfHour:function() { return MSDate.minutesFromInterval(this.interval) ; },
+    
+        secondOfMinute:function() { return MSDate.secondsFromInterval(this.interval) ; },
+    
+        dateWithoutTime: function() { return new MSDate(this.interval - MSDate.timeFromInterval(this.interval)) ; },
+        dateOfFirstDayOfYear: function() { var c = this.components() ; return c !== null ? new MSDate(c.year,1, 1) : null ; },
+        dateOfLastDayOfYear: function() { var c = this.components() ; return c !== null ? new MSDate(c.year,12, 31) : null ; },
+        dateOfFirstDayOfMonth: function() { var c = this.components() ; return c !== null ? new MSDate(c.year, c.month, 1) : null ; },
+        dateOfLastDayOfMonth: function() { var c = this.components() ; return c !== null ? new MSDate(c.year, c.month, MSDate._lastDayOfMonth(c.year, c.month)) : null ; },
+    
+        toInt: function() {
+            var c = this.components() ;
+            return c === null ? 0 : (c.year < 0 ? -1 : 1) * (c.year < 0 ? -c.year : c.year) * 10000 + c.month * 100 + c.day ;
+        },
+        toUInt: function() {
+            var c = this.components() ;
+            return c === null || c.year < 0 ? 0 : c.year * 10000 + c.month * 100 + c.day ;
+        },
+        toDate: function() {
+            var c = this.components() ;
+            return c !== null ? new Date(c.year, c.month - 1, c.day, c.hour, c.minute, c.second, 0) : null ;
+        },
+        toJSON: function (key) {
+            var d = this.toDate() ;
+            return d !== null ? d.toJSON(key) : null ;
+        },
+        toArray: function() {
+            var c = this.components() ;
+            return c != null ? [c.year, c.month, c.day, c.hour, c.minute, c.seconds, c.dayOfWeek] : null ;
+        },
+        toMSTE: function(encoder) {
+            if (encoder.shouldPushObject(this)) {
+                encoder.push(22) ;
+                encoder.push(this.interval + MSDate.SecsFrom19700101To20010101) ;
+            }
+        }
+    
+    }, true) ;
+    // MSArray is a generic array subclass designed to be subclassed
+    // MSNaturalArray and MSData are both subclasses of MSArray
+    
+    // ================ class interface ====================
+    
+    // with this constructor a new MSArray(10) creates a data with number 10 at position 0
+    // any array passed as an argument will be concatenated
+    
+    
+    function MSArray() {
+        var a, ret = [], i, count = arguments.length ;
+        var localConstructor = this.constructor ;
+    
+        Object.setPrototypeOf(ret, localConstructor.prototype) ;
+    
+        for (i = 0 ; i < count ; i++) {
+            a = arguments[i] ;
+            if ($ok(a) && a.isArray) { localConstructor.prototype.push.apply(ret, a) ; }
+            else { ret.push(a) ; }
+        }
+        return ret ;
+    }
+    
+    MSArray.prototype = Object.create(Array.prototype, { constructor: {value: MSArray} });
+    
+    // ================ constants ====================
+    
+    // ================= class methods ===============
+    
+    // ================  instance methods =============
+    MSTools.defineInstanceMethods(MSArray, {
+        unshift: function() {
+            var count = arguments.length ;
+            if (count) {
+                var F = this.constructor, i, n = new F() ;
+                for (i = 0 ; i < count ; i++) { n.push(arguments[i]) ; }
+                return Array.prototype.unshift.apply(this, n) ; // unshift
+            }
+            return this.length ;
+        },
+        concat: function() {
+            var F = this.constructor ;
+            var ret = new F(this), i, count = arguments.length, p = F.prototype.push ;
+            for (i = 0 ; i < count ; i++) { p.apply(ret, arguments[i]) ; }
+            return ret ;
+        },
+        slice: function(start,end) {
+            // console.log("want to slice "+MSTools.stringify(this)+" from "+start+" to "+end) ;
+            var ret = Array.prototype.slice.call(this, start, end) ;
+            Object.setPrototypeOf(ret, Object.getPrototypeOf(this)) ;
+            return ret ;
+        },
+        splice: function(index, n) {
+            var a = [index, n], o, i, count = arguments.length, ret, p = this.constructor.prototype.push ;
+            if (count > 2) {
+                for (i = 2 ; i < count ; i++) { p.call(a, arguments[i]) ; }
+            }
+            ret =  Array.prototype.splice.apply(this, a) ;
+            Object.setPrototypeOf(ret, Object.getPrototypeOf(this)) ;
+            return ret ;
+        },
+        filter: function() {
+            var ret =  Array.prototype.filter.apply(this, arguments) ;
+            Object.setPrototypeOf(ret, Object.getPrototypeOf(this)) ;
+            return ret ;
+        }
+    }, true) ;
+    
+    
+    
+    // ================ class interface ====================
+    /* global MSArray */
+    function MSNaturalArray() { return MSArray.apply(this, arguments); }
+    
+    MSNaturalArray.prototype = Object.create(MSArray.prototype, { constructor: {value: MSNaturalArray} });
+    
+    // ================ constants ====================
+    MSTools.defineHiddenConstants(MSNaturalArray.prototype, {
+        isa:'Naturals',
+        MSTECode:26
+    }, true) ;
+    
+    // ================= class methods ===============
+    
+    // ================  instance methods =============
+    MSTools.defineInstanceMethods(MSNaturalArray, {
+        objectAtIndex: function(i) {
+            var v = this[i] ;
+            return $ok(v) ? v.toUInt() : 0 ;
+        },
+        push: function() {
+            var o, i, count = arguments.length ;
+            //console.log('MSNaturalArray push with '+arguments.length+' args.') ;
+            for (i = 0 ; i < count ; i++) {
+                o = arguments[i] ;
+                o = $ok(o) ? o.toUInt() : 0 ;
+                if ($ok(o)) { Array.prototype.push.call(this, o) ; }
+            }
+        }
+        // unshift(), concat(), slice(), filter(), splice() and toMSTE() are inherited from MSArray
+    }, true) ;
+    
+    
+    
+    
+    // ================ class interface ====================
+    /* global MSArray */
+    
+    // with this constructor a new MSData(10) creates a data with the byte '10' at first position
+    // any array passed as an argument will be concatenated
+    function MSData() {
+        var a, ret = new MSArray(), i, count = arguments.length ;
+        var localConstructor = this.constructor ;
+    
+        Object.setPrototypeOf(ret, localConstructor.prototype) ;
+    
+        // console.log('wanted to create a data new with '+count+' arguments :') ;
+        if (count === 1 && (typeof (a = arguments[0])) === 'string') {
+            count = a.length ;
+            for (i = 0 ; i < count ; i++) { ret.push(a.charCodeAt(i) & 0xff) ; }
+        }
+        else {
+            for (i = 0 ; i < count ; i++) {
+                a = arguments[i] ;
+                //console.log('arguments['+i+']=<'+a+'> ('+(typeof a)+')') ;
+                if ($ok(a) && a.isArray) { localConstructor.prototype.push.apply(ret, a) ; }
+                else { ret.push(a) ; }
+            }
+        }
+        return ret ;
+    }
+    
+    MSData.prototype = Object.create(MSArray.prototype, { constructor: {value: MSData} });
+    
+    // ================ constants ====================
+    MSTools.defineHiddenConstant(MSData.prototype,'isa', 'Data', true) ;
+    MSTools.defineConstants(MSData, {
+        EMPTY_DATA:new MSData()
+    }, true) ;
+    
+    MSTools.defineHiddenConstants(MSData, {
+        __base64Tokens:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",
+        __base64Index:[
+        -2, -2, -2, -2, -2, -2, -2, -2, -2, -1, -1, -2, -2, -1, -2, -2,
+        -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
+        -1, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, 62, -2, -2, -2, 63,
+        52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -2, -2, -2, -2, -2, -2,
+        -2,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14,
+        15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -2, -2, -2, -2, -2,
+        -2, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+        41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -2, -2, -2, -2, -2
+        ],
+        __base64URLTokens:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_",
+        __base64URLIndex:[
+        -2, -2, -2, -2, -2, -2, -2, -2, -2, -1, -1, -2, -2, -1, -2, -2,
+        -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
+        -1, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, 62, -2, -2,
+        52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -2, -2, -2, -2, -2, -2,
+        -2,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14,
+        15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -2, -2, -2, -2, 63,
+        -2, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+        41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -2, -2, -2, -2, -2
+        ],
+        __base64PaddingChar:'=',
+        __base64DecodeFn:[
+        function(result, array, dc) { array[0] = (dc << 2) & 0xff ; },
+        function(result, array, dc) { array[0] |= dc >> 4 ; array[1] = ((dc & 0x0f) << 4) & 0xff ; },
+        function(result, array, dc) { array[1] |= dc >> 2 ; array[2] = ((dc & 0x03) << 6) & 0xff ; },
+        function(result, array, dc) {
+            array[2] |= dc ;
+            result.push(array[0], array[1], array[2]) ;
+            array[0] = array[1] = array[2] = 0 ;
+        },
+        ]
+        }, true) ;
+    
+    // ================= class methods ===============
+    MSTools.defineMethods(MSData, {
+        dataWithBase64String: function(s, index, paddingChar) {
+            var result = null ;
+            if ((typeof s) === 'string') {
+                var len = s.length ;
+                result = new MSData() ;
+                if (len > 0) {
+                    var j, i = 0, c, dc, array = [] ;
+    
+                    array[0] = array[1] = array[2] = 0 ;
+    
+                    index = index || MSData.__base64Index ;
+                    paddingChar = paddingChar || MSData.__base64PaddingChar ;
+                    paddingChar = paddingChar.charCodeAt(0) ;
+    
+                    for (j = 0 ; j < len ; j++) {
+                        c = s.charCodeAt(j) ;
+                        if (c === paddingChar) { break; }
+                        else if (c > 127) { return null ; } // bad character
+    
+                        dc = index[c] ;
+                        if (dc === -1) { continue ; } // we skip spaces and separators
+                        else if (dc === -2) { return null ; } // bad character
+    
+                        MSData.__base64DecodeFn[i % 4](result, array, dc) ;
+                        i++ ;
+                    }
+                    if (c === paddingChar) {
+                        i = i % 4;
+                        if (i === 1) { return null ; }
+                        i-- ;
+                        for (j = 0 ; j < i ; j++) { result.push(array[j]) ; }
+                    }
+                }
+            }
+            return result ;
+        }
+    }, true) ;
+    
+    // ================  instance methods =============
+    MSTools.defineInstanceMethods(MSData, {
+        // to spead data implementation we did rewrite the byteAtIndex and the objectAtIndex method
+        byteAtIndex: function(i) { var v = Number(this[i]) ; return v > 0 ? v & 0xff : 0 ; }, // works because NaN > 0 is false
+        objectAtIndex: function(i) { var v = Number(this[i]) ; return v > 0 ? v & 0xff : 0 ; },
+        push: function() {
+            var o, i, count = arguments.length ;
+            for (i = 0 ; i < count ; i++) {
+                // console.log('push('+arguments[i]+') '+(typeof arguments[i])) ;
+                o = Number(arguments[i]) ; if (o < 0) { o = 0 ;}
+                Array.prototype.push.call(this, o & 0xff) ;
+            }
+        },
+        // unshift, concat, slice, filter and splice are inherited from MSArray
+        toString: function() {
+            var i, count = this.length ;
+            if (count) {
+                var array = [] ;
+                // console.log("count = "+count) ;
+                for (i = 0 ; i < count ; i++) {
+                    array.push(String.fromCharCode(this.byteAtIndex(i))) ;
+                }
+                return array.join('') ;
+            }
+            return String.EMPTY_STRING ;
+        },
+        toBase64String: function(tokens, paddingChar) {
+            var i, end, array, token ;
+    
+            tokens = tokens || MSData.__base64Tokens ;
+            paddingChar = paddingChar || MSData.__base64PaddingChar ;
+    
+            if (this.length === 0) { return '' ; }
+    
+            end = this.length - this.length % 3 ;
+            array = [] ;
+    
+            for (i = 0 ; i < end ; i += 3) {
+    
+                token = (this.byteAtIndex(i) << 16) | (this.byteAtIndex(i+1) << 8) | this.byteAtIndex(i+2) ;
+    
+                array.push(tokens.charAt(token >> 18)) ;
+                array.push(tokens.charAt((token >> 12) & 0x3F)) ;
+                array.push(tokens.charAt((token >> 6) & 0x3f)) ;
+                array.push(tokens.charAt(token & 0x3f)) ;
+            }
+    
+            switch (this.length - end) {
+                case 1:
+                    token = this.byteAtIndex(i) << 16 ;
+                    array.push(tokens.charAt(token >> 18) + tokens.charAt((token >> 12) & 0x3F) + paddingChar + paddingChar );
+                    break;
+                case 2:
+                    token = (this.byteAtIndex(i) << 16) | (this.byteAtIndex(i+1) << 8) ;
+                    array.push(tokens.charAt(token >> 18) + tokens.charAt((token >> 12) & 0x3F) + tokens.charAt((token >> 6) & 0x3F) + paddingChar);
+                    break ;
+            }
+            return array.join("") ;
+        },
+        toMSTE: function(encoder) {
+            if (this.length === 0) { encoder.push(4) ; }
+            else if (encoder.shouldPushObject(this)) {
+                encoder.push(25) ;
+                encoder.push(this.toBase64String()) ;
+            }
+        },
+        hashCode: function() {
+            // we use the same hash than strings
+            var i, hash = 0, count = this.length ;
+            for (i = 0; i < count; i++) {
+                hash  = ((hash << 5) - hash) + this.byteAtIndex(i) ;
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            return hash;
+        }
+    }, true) ;
+    
+    // ================ class interface ====================
+    function MSColor(r,g,b,a)
+    {
+        if (typeof r === 'string') {
+            var s, bits, ok = true ;
+            r = r.replace(/ /g,'') ;
+            if (!$length(r)) { ok = false ; }
+            if (ok && r.charAt(0) === '#') { r = r.substr(1); }
+            if (ok && $length(r) < 3) { ok = false ; }
+            if (ok) {
+                r = r.toLowerCase();
+                s = MSColor.namedColors[r] ;
+    
+                bits = MSColor.colorStringRegex.exec(s?s:r);
+                if ($length(bits) !== 4) {
+                    bits = MSColor.shortColorStringRegex.exec(s?s:r);
+                    if ($length(bits) !== 4) { ok = false ; }
+                }
+                if (ok) {
+                    this.red = parseInt(bits[1], 16) & 255 ;
+                    this.green =  parseInt(bits[2], 16) & 255 ;
+                    this.blue =  parseInt(bits[3], 16) & 255 ;
+                }
+            }
+            if (!ok) {
+                this.red = this.green = this.blue = 0 ;
+            }
+            this.alpha = 255 ;
+        }
+        else {
+            r = r.toUInt() ;
+            if ($ok(g) && $ok(b)) {
+                this.red = r & 255 ;
+                this.green = g.toUInt() & 255 ;
+                this.blue = b.toUInt() & 255 ;
+                this.alpha = $ok(a) ? a.toUInt() & 255 : 255 ;
+            }
+            // should we throw if we only have two args ?
+            else {
+                // the 4 bytes contains the RTGB value TTRRGGBB where TT is the transparency (0 means opaque)
+                this.alpha = 0xff - ((r >> 24) & 0xff) ;
+                this.red = (r >> 16) & 0xff ;
+                this.green = (r >> 8) & 0xff ;
+                this.blue = r & 0xff ;
+            }
+        }
+    }
+    
+    // ================ constants ====================
+    MSTools.defineConstants(MSColor,{
+        RED:new MSColor(0xff,0,0),
+        GREEN:new MSColor(0,0xff,0),
+        YELLOW:new MSColor(0xff,0xff,0),
+        BLUE:new MSColor(0,0,0xff),
+        CYAN:new MSColor(0,0xff,0xff),
+        MAGENTA:new MSColor(0xff,0,0xff),
+        WHITE:new MSColor(0xff, 0xff, 0xff),
+        BLACK:new MSColor(0,0,0)
+    }, true) ;
+    
+    MSTools.defineHiddenConstants(MSColor, {
+        colorStringRegex:/^(\w{2})(\w{2})(\w{2})$/,
+        shortColorStringRegex:/^(\w{1})(\w{1})(\w{1})$/,
+        namedColors:{
+            beige: 'f5f5dc',
+            black: '000000',
+            blue: '0000ff',
+            brown: 'a52a2a',
+            cyan: '00ffff',
+            fuchsia: 'ff00ff',
+            gold: 'ffd700',
+            gray: '808080',
+            green: '008000',
+            indigo : '4b0082',
+            ivory: 'fffff0',
+            khaki: 'f0e68c',
+            lavender: 'e6e6fa',
+            magenta: 'ff00ff',
+            maroon: '800000',
+            olive: '808000',
+            orange: 'ffa500',
+            pink: 'ffc0cb',
+            purple: '800080',
+            red: 'ff0000',
+            salmon: 'fa8072',
+            silver: 'c0c0c0',
+            snow: 'fffafa',
+            teal: '008080',
+            tomato: 'ff6347',
+            turquoise: '40e0d0',
+            violet: 'ee82ee',
+            wheat: 'f5deb3',
+            white: 'ffffff',
+            yellow: 'ffff00'
+        },
+        HSBToRGB:[
+            function (brightness, p, q, t) { return new MSColor(brightness, t, p) ; },
+            function (brightness, p, q, t) { return new MSColor(q, brightness, p) ; },
+            function (brightness, p, q, t) { return new MSColor(p, brightness, t) ; },
+            function (brightness, p, q, t) { return new MSColor(p, q, brightness) ; },
+            function (brightness, p, q, t) { return new MSColor(t, p, brightness) ; },
+            function (brightness, p, q, t) { return new MSColor(brightness, p, q) ; },
+            function (brightness, p, q, t) { return new MSColor(brightness, t, p) ; }
+        ]
+    
+    }, true) ;
+    
+    MSTools.defineHiddenConstant(MSColor.prototype,'isa', 'Color', true) ;
+    
+    // ================= class methods ===============
+    MSTools.defineMethods(MSColor, {
+        lighter: function(X) { X /= 255.0 ; return Math.round((2.0*(X)*(X)/3.0+(X)/2.0+0.25)*255) ; },
+        darker: function(X) { X /= 255.0 ; return Math.round((-(X)*(X)/3+5.0*(X)/6.0)*255) ; },
+        colorWithHSB: function(hue, saturation, brightness) {
+            if (typeof hue === "object" && "h" in hue && "s" in hue && "b" in hue) {
+                brightness = hue.b;
+                saturation = hue.s;
+                hue = hue.h;
+            }
+            if (brightness !== 0) {
+                var i = (Math.max(0, Math.floor(hue * 6))) % 7,
+                    f = (hue * 6) - i,
+                    p = brightness * (1 - saturation),
+                    q = brightness * (1 - (saturation * f)),
+                    t = brightness * (1 - (saturation * (1 - f))) ;
+                return MSColor.HSBToRGB[i](brightness, p, q, t) ;
+            }
+            return MSColor.BLACK ;
+        }
+    }, true) ;
+    
+    // ================  instance methods =============
+    MSTools.defineInstanceMethods(MSColor, {
+        luminance:function () { return (0.3*this.red + 0.59*this.green +0.11*this.blue)/255.0 ; },
+        isPale:function() { return this.luminance() > 0.6 ? true : false ; },
+    
+        lighterColor: function() { return new MSColor(MSColor.lighter(this.red), MSColor.lighter(this.green), MSColor.lighter(this.blue), this.alpha) ; },
+        darkerColor: function() { return new MSColor(MSColor.darker(this.red), MSColor.darker(this.green), MSColor.darker(this.blue), this.alpha) ; },
+        lightest: function() {
+            return new MSColor(MSColor.darker(MSColor.darker(this.red)), MSColor.darker(MSColor.darker(this.green)), MSColor.darker(MSColor.darker(this.blue)), this.alpha) ;
+        },
+        darkest: function() {
+            return new MSColor(MSColor.darker(MSColor.darker(this.red)), MSColor.darker(MSColor.darker(this.green)), MSColor.darker(MSColor.darker(this.blue)), this.alpha) ;
+        },
+        matchingColor:function() { return this.isPale() ? this.darkestColor() : MSColor.whiteColor ; },
+        toString:function() {
+            return this.alpha === 255 ? '#'+this.red.toHexa(2)+this.green.toHexa(2)+this.blue.toHexa(2) : "rgba("+this.red+","+this.green+","+this.blue+","+(this.alpha/255.0)+")" ;
+        },
+        toNumber:function() { return ((0xff - this.alpha) * 16777216) + (this.red * 65536) + (this.green * 256) + this.blue ;},
+        toInt:function() { return (this.red * 65536) + (this.green * 256) + this.blue ; }, // the toInt function does not use the transparency because it should overflow the signed 32 bits
+        toRGBA:function() { return (this.red * 16777216) + (this.green*65536) + (this.blue * 256) + this.alpha ;},
+        toHSB:function() {
+            var red = this.red / 255, green = this.green / 255, blue = this.blue / 255 ;
+            var max = Math.max(red, green, blue), min = Math.min(red, green, blue) ;
+            var hue = 0, saturation = 0, brightness = max ;
+            if (min < max) {
+                var delta = (max - min);
+                saturation = delta / max;
+                if (red === max) { hue = (green - blue) / delta ; }
+                else if (green === max) { hue = 2 + ((blue - red) / delta) ; }
+                else { hue = 4 + ((red - green) / delta); }
+                hue /= 6;
+                if (hue < 0) { hue += 1 ; }
+                if (hue > 1) { hue -= 1 ; }
+            }
+            return {h: hue, s: saturation, b: brightness} ;
+        },
+        isEqualTo: function(other, options) {
+            if (this === other) { return true ; }
+            return $ok(other) && this.isa === other.isa && this.toRGBA() === other.toRGBA() ? true : false ;
+        },
+        toArray: function() { return [this.red, this.green, this.blue, this.alpha] ; },
+        toMSTE: function(encoder) {
+            if (encoder.shouldPushObject(this)) {
+                encoder.push(24) ;
+                encoder.push(this.toNumber()) ;
+            }
+        }
+    }, true) ;
+    
+    MSTools.defineInstanceMethods(MSColor,{
+        toUInt: MSColor.prototype.toNumber,
+        valueOf: MSColor.prototype.toNumber
+    }, true) ;
+    
+    
+    // ================ class interface ====================
+    function MSCouple(first, second)
+    {
+        this.firstMember = $ok(first) ? first : null ;
+        this.secondMember = $ok(second) ? second : null ;
+    }
+    
+    // ================ constants ====================
+    MSTools.defineHiddenConstants(MSCouple.prototype, {
+        isa:'Couple',
+        length:2 // there is always 2 slots even if one of them or both are null (SHOULD WE KEEP THAT ?)
+    }, true) ;
+    
+    // ================= class methods ===============
+    
+    // ================  instance methods =============
+    MSTools.defineInstanceMethods(MSCouple, {
+        toString: function() { return [this.firstMember, this.secondMember].toString() ; },  // the same to string as an array
+        isEqualTo: function(other, options) {
+            if (this === other) { return true ; }
+            return $ok(other) && this.isa === other.isa && $equals(this.firstMember, other.firstMember, options) && $equals(this.secondMember, other.secondMember, options)? true : false ;
+        },
+        toArray: function() { return [this.firstMember, this.secondMember] ; },
+        toMSTE: function(encoder) {
+            if (encoder.shouldPushObject(this)) {
+                var v, i, count = this.length ;
+                encoder.push(32) ;
+                encoder.encodeObject(this.firstMember) ;
+                encoder.encodeObject(this.secondMember) ;
+            }
+        }
+    }, true) ;
+    
+    if (MSTools.degradedMode) {
+        MSTools.defineInstanceMethods(Array, {
+            toInt:function() { return this.toNumber().toInt() ; },
+            toUInt:function(base) { return this.toInt().toUInt() ; }
+        }) ;
+    }
+    
+    // ================ MSTE Singleton ====================
+    /* global MSData, MSColor, MSNaturalArray, MSCouple, MSDate */
+    
+    MSTools.MSTE = {
+        isa:'MSTE',
+        toMSTE:function(encoder) { encoder.encodeException(this) ; },
+        CONSTANTS:[null, true, false, String.EMPTY_STRING, Date.DISTANT_PAST, Date.DISTANT_FUTURE, MSData.EMPTY_DATA],
+        ENGINES:[
+            {
+                states:[
+                    0,        1,        2,        106,    106,
+                    106,    108,    109,    100,    9,
+                    110,    110,    110,    110,    110,
+                    110,    110,    110,    110,    110,
+                    102,    103,    105,    107,    4,
+                    5,        3,        9
+                ],
+                codeNames:[
+                    'null', 'true', 'false', 'I-DECIMAL', 'F-DECIMAL',
+                    'STRING', 'DATE', 'COLOR', 'DICT', '#REF',
+                    'CHAR', 'UCHAR', 'SHORT', 'USHORT', 'INT32',
+                    'UINT32', 'INT64', 'UINT64', 'FLOAT', 'DOUBLE',
+                    'ARRAY', 'NATURALS', 'COUPLE', 'DATA', 'DISTANT_PAST',
+                    'DISTANT_FUTURE', 'EMPTY_STRING', '#WEAK_REF'
+                ],
+                classCode:50,
+                getClassIndex:function(code) { return $div(code - 50,2) ;},
+                validCode:function(code) { return (code > 27 && code < 50) || code < 0 ? false : true ; },
+                version:0x0101
+            },
+            {
+                states:[
+                    0,        1,      2,      3,      6,
+                    -100,  -100,   -100,   -100,      9,
+                    110,    110,    110,    110,    110,
+                    110,    110,    110,    110,    110,
+                    106,    106,    108,    111,    109,
+                    107,    103,   -100,   -100,   -100,
+                    100,    102,    105
+                ],
+                codeNames:[
+                    'null', 'true', 'false', 'EMPTY_STRING', 'EMPTY_DATA',
+                    '** CODE5 **', '** CODE6 **', '** CODE7 **','** CODE8 **', '#REF',
+                    'CHAR', 'UCHAR', 'SHORT', 'USHORT', 'INT32',
+                    'UINT32', 'INT64', 'UINT64', 'FLOAT', 'DOUBLE',
+                    'DECIMAL', 'STRING', 'DATE', 'TIMESTAMP', 'COLOR',
+                    'DATA', 'NATURALS', '** CODE27 **', '** CODE28 **', '** CODE29 **',
+                    'DICT', 'ARRAY', 'COUPLE'
+                ],
+                classCode:50,
+                getClassIndex:function(code) { return code - 50 ;},
+                validCode:function(code) { return code < 0 || (code > 4 && code < 9) || (code > 26 && code < 30) || (code > 32 && code < 50) ? false : true ; },
+                version:0x0102
+            }
+        ]
+    } ;
+    
+    // ================ decoder class interface ====================
+    MSTools.MSTE.Decoder = function(options) {
+        this.isa = 'MSTEDecoder' ;
+        this.keys = [] ;
+        this.tokens = [] ;
+        this.classes = [] ;
+        this.objects = [] ;
+        this.index = 0 ;
+        this.correspondances = null ;
+        this.supportedVersions = [] ;
+        this.root = null ;
+    
+        for (var i = 0 ; i < MSTools.MSTE.ENGINES.length ; i++) {
+            this.supportedVersions.push(MSTools.MSTE.ENGINES[i].version) ;
+        }
+        if ($ok(options)) {
+            this.correspondances = options.classes ;
+        }
+    } ;
+    
+    // ================  decoder instance methods =============
+    MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
+        parse:function(source) {
+            var v, n, i, cn, kn, a ;
+    
+            this.tokens = [] ;
+            this.keys = [] ;
+            this.classes = [] ;
+            this.objects = [] ;
+            this.index = 0 ;
+    
+            if (typeof source === "string") {
+                a = JSON.parse(source) ;
+            } else {
+                a = source;
+            }
+    
+    
+            n = $length(a) ;
+            if (n < 4) { throw "Unable to decode MSTE Source : two few tokens" ; }
+    
+            this.count = a[1].toUInt() ;
+            if (this.count !== n ) { throw "Unable to decode MSTE Source : bad control count" ;}
+    
+            v = a[0] ;
+            if (!v.hasPrefix('MSTE') || (v = this.supportedVersions.indexOf(parseInt(v.slice(4),16))) === -1) {
+                throw "Unable to decode MSTE Source : bad version "+this.tokens[0] ;
+            }
+    
+            this.engine = MSTools.MSTE.ENGINES[v] ;
+    
+            //console.log('version = MSTE'+this.engine.version.toHexa(4)) ;
+    
+            this.crc = a[2] ;
+    
+            cn = a[3].toUInt() ;
+            if (5 + cn > n) { throw "Unable to decode MSTE Source : not enough tokens to store classes and a stream" ;}
+            for (i = 0 ; i < cn ; i++) { this.classes[i] = a[4+i] ; }
+    
+            kn = a[4+cn].toUInt() ;
+            if (6 + cn + kn > n) { throw "Unable to decode MSTE Source : not enough tokens to store a stream" ;}
+    
+            for (i = 0 ; i < kn ; i++) { this.keys[i] = a[5+cn+i] ; }
+    
+            this.tokens = a ;
+            this.index = 5+cn+kn ;
+    
+            this.decodeStream() ;
+    
+            return this.root ;
+        },
+    /*
+    
+            This is a brand new version of MSTE Reading.
+            It is multi-version compatible and don't use recursive functions
+            (we want to preserve the javascript stack)
+    
+            states        description
+            -2              code reading after a dictionary key was read
+            -1            code reading
+    
+            0..4        Constants
+    
+            9            reference of an object
+    
+            100            dictionary reading initialization
+            101            read dictionary key of key-value couple
+            102            array reading initialization
+            103            MSNaturalArray reading initialization
+            104            MSNaturalArray naturals reading
+            105            Couple reading initialization
+            106            String or Decimal number reading
+            107            Base 64 data reading
+            108            Date reading
+            109            Color reading
+            110            Simple (non referenced) numbers
+            111            Time stamp reading
+    
+            c             descriptions
+    */
+        decodeStream:function() {
+            var a = this.tokens, i = this.index, n = this.count, count, index ;
+            var code, state = -1, futureClass = null, FutureConstructor = null ;
+            var k, constants = MSTools.MSTE.CONSTANTS, clen = constants.length ;
+            var stack = [], value, currentState = this, futureState = null, hasValue = false ;
+            var engine =  this.engine ;
+    
+            currentState = {s:0, i:0, n:1, k:'root', o:this} ;
+            stack.push(currentState) ;
+    
+            function dst(v) { return $ok(v) ? ($length(v.isa) ? v.isa : typeof v) : (typeof v === 'undefined' ? 'undefined' : 'NULL') ; }
+    
+            while (i < n) {
+                futureState = null ;
+                hasValue = false ;
+                //console.log('---- MSTE automat state : '+state+' stack depth : '+stack.length+'--------------------------') ;
+                //console.log('     index = '+i+', token ['+a[i]+']') ;
+                switch(state) {
+                    case -2: // token code reading after a dictionary key was read
+                    case -1: // token code reading
+                        if ($ok(currentState.nextState)) {
+                            //console.log('changing state from -1 to '+currentState.nextState) ;
+                            state = currentState.nextState ;
+                            currentState.nextState = null ;
+                            continue ;
+                        }
+                        futureClass = null ;
+                        code = a[i++] ;
+                        if (!engine.validCode(code)) {
+                            throw "Unable to decode MSTE token with code "+code ;
+                        }
+                        else if (code >= engine.classCode) {
+                            futureClass = this.classes[engine.getClassIndex(code)] ;
+                            FutureConstructor = null ;
+                            if (futureClass) {
+                                if (this.correspondances) { FutureConstructor = this.correspondances[futureClass] ; }
+                            }
+                            //console.log('Found a class named <'+futureClass+'>') ;
+                            state = 100 ;
+                            // TODO using future constructor and future class
+                            // with this linearized version it's highly complicated to change already referenced objects...
+                        }
+                        else {
+                            //console.log('     did read code '+code+' ('+engine.codeNames[code]+')') ;
+                            state = engine.states[code] ;
+                            if (state >= 0 && state < clen) {
+                                value = constants[state] ;
+                                //console.log("constant["+state+"]=<"+value+">") ;
+                                hasValue = true ;
+                                state = -1 ;
+                            }
+                        }
+                        break ;
+    
+                    case 9: // obsolete : compatibility state. weak reference to an object
+                        if (a[i] >= this.objects.length) {
+                            throw "Referenced object " + a[i] + " is out of bounds [0, " + this.objects.length + "[";
+                        }
+                        value = this.objects[a[i++]] ;
+                        hasValue =  true ;
+                        state = -1 ;
+                        break ;
+    
+                    case 100: // dictionary reading initialization
+                        count = a[i++] ;
+                        if (typeof FutureConstructor === 'function') {
+                            value = new FutureConstructor() ;
+                            //console.log("did define a new object of class "+ value.isa) ;
+                        }
+                        else {
+                            //console.log("Registering new dictionary as "+this.objects.length+"nth object") ;
+                            value = {} ;
+                        }
+                        hasValue = true ;
+                        index = this.objects.length ;
+                        this.objects.push(value) ;
+                        if (count > 0) {
+                            futureState = {s:0, i:0, n:count, o:value, index:index} ;
+                            state = 101 ;
+                        }
+                        else { state = -1 ; }
+                        break ;
+    
+                    case 101: // read dictionary key
+                        currentState.k = this.keys[a[i++]] ; // the key is a string
+                        //console.log('     did read key \"'+currentState.k+'\"') ;
+                        state = -2 ;
+                        break ;
+    
+                    case 102: // array reading initialization
+                        count = a[i++] ;
+                        value = [] ;
+                        //console.log("Registering new Array as "+this.objects.length+"nth object") ;
+                        this.objects.push(value) ;
+                        hasValue = true ;
+                        if (count > 0) { futureState = {s:1, i:0, n:count, o:value} ; }
+                        state = -1 ;
+                        break ;
+    
+                    case 103: // naturals array reading initialization
+                        count = a[i++] ;
+                        value = new MSNaturalArray() ;
+                        //console.log("Registering new Natural Array as "+this.objects.length+"nth object") ;
+                        this.objects.push(value) ;
+                        hasValue = true ;
+                        if (count > 0) {
+                            futureState = {s:-1, i:0, n:count, o:value} ;
+                            state = 104 ;
+                        }
+                        else { state = -1 ; }
+                        break ;
+    
+                    case 104: // contents of natural array reading
+                        currentState.o.push(a[i++]) ;
+                        currentState.i++ ;
+                        if (currentState.i === currentState.n) {
+                            stack.pop() ;
+                            //console.log('      <<<< did pop stack 104') ;
+                            currentState = stack.length ? stack[stack.length - 1] : null ;
+                            state = -1 ;
+                        }
+                        break ;
+    
+                    case 105: // couple reading initialization
+                        value = new MSCouple() ;
+                        //console.log("Registering new Couple as "+this.objects.length+"nth object") ;
+                        this.objects.push(value) ;
+                        hasValue = true ;
+                        futureState = {s:2, i:0, n:2, o:value} ;
+                        state = -1 ;
+                        break ;
+    
+                    case 106: // simple string or decimal reading
+                        value = a[i++] ;
+                        hasValue = true ;
+                        //console.log("Registering new object '"+value+"' as "+this.objects.length+"nth object") ;
+                        this.objects.push(value) ;
+                        state = -1 ;
+                        break ;
+    
+                    case 107: // data reading
+                        value = MSData.dataWithBase64String(a[i++]) ;
+                        hasValue = true ;
+                        //console.log("Registering new data '"+value+"' as "+this.objects.length+"nth object") ;
+                        this.objects.push(value) ;
+                        state = -1 ;
+                        break ;
+    
+                    case 108: // true date reading
+                        value = new MSDate(a[i++] - MSDate.SecsFrom19700101To20010101) ; // conversion from EPOCH to 01012001 reference point
+                        hasValue = true ;
+                        //console.log("Registering new date '"+value+"' as "+this.objects.length+"nth object") ;
+                        this.objects.push(value) ;
+                        state = -1 ;
+                        break ;
+    
+                    case 109: // color reading
+                        value = new MSColor(a[i++]) ;
+                        hasValue = true ;
+                        // console.log("Registering new coloe '"+value+"' as "+this.objects.length+"nth object") ;
+                        this.objects.push(value) ;
+                        state = -1 ;
+                        break ;
+    
+                    case 110: // simple numbers (they are not referenced in objects)
+                        value = a[i++] ;
+                        hasValue = true ;
+                        state = -1 ;
+                        break ;
+    
+                    case 111: // TIMESTAMP READING
+                        value = 1000 * a[i++] ; // the initial value can be a double
+    
+                        if (value >= Date.DISTANT_FUTURE_TS) { value = Date.DISTANT_FUTURE_TS ; }
+                        else if ( value <= Date.DISTANT_PAST_TS) { value = Date.DISTANT_PAST_TS ; }
+    
+                        value = Date.dateWithUTCTime(value) ;
+                        //console.log("Registering new timestamp '"+value+"' as "+this.objects.length+"nth object") ;
+                        this.objects.push(value) ;
+                        hasValue = true ;
+                        state = -1 ;
+                        break ;
+    
+                    default:
+                        //console.log("Bad state encoutered during parsing") ;
+                        throw 'Bad state encoutered during parsing' ;
+                }
+                if (hasValue) {
+    
+                    switch(currentState.s) {
+                        case 0:
+                            ////console.log('     dict[\''+currentState.k+'\'] = '+MSTools.stringify(value)) ;
+                            //console.log('     dict[\''+currentState.k+'\'] = ' + dst(value));
+                            currentState.o[currentState.k] = value ;
+                            currentState.nextState = 101 ;
+                            break ;
+                        case 1:
+                            ////console.log('     array['+currentState.i+'] = '+MSTools.stringify(value)) ;
+                            //console.log('     array['+currentState.i+'] = ' + dst(value)) ;
+                            currentState.o[currentState.i] = value ;
+                            break ;
+                        case 2:
+                            ////console.log('     couple.firstMember = '+MSTools.stringify(value)) ;
+                            //console.log('     couple.firstMember = ' + dst(value)) ;
+                            currentState.o.firstMember = value ;
+                            currentState.s = 3 ;
+                            break ;
+                        case 3:
+                            ////console.log('     couple.secondMember = '+MSTools.stringify(value)) ;
+                            //console.log('     couple.secondMember = ' + dst(value)) ;
+                            currentState.o.secondMember = value ;
+                            break ;
+                        default:
+                            throw "Bad currentState : "+currentState.s ;
+                    }
+                    currentState.i++ ;
+                    if (currentState.i === currentState.n) {
+                        stack.pop() ;
+                        currentState = stack.length ? stack[stack.length - 1] : null ;
+                        /*console.log('      <<<< did pop stack EOL') ;
+                        if (currentState) {
+                            console.log('      new current state.s = '+currentState.s+', i = '+currentState.i+', n = '+currentState.n+', => '+currentState.nextState) ;
+                        }
+                        else {
+                            console.log('      : stack is empty') ;
+                        }*/
+                    }
+                }
+                if (futureState) {
+                    stack.push(futureState) ;
+                    //console.log('      >>>> did push stack') ;
+                    currentState = futureState ;
+                    //console.log('      new current state.s = '+currentState.s+', i = '+currentState.i+', n = '+currentState.n+', => '+currentState.nextState) ;
+                }
+            }
+            //console.log('---- MSTE automat final state : '+state+' stack depth : '+stack.length+'--------------------------') ;
+            if (state !== -1)    { throw "Bad final state "+state ; }
+            if (stack.length > 0) { throw "Bad final stack with current stack state "+stack.lastObject().s ; }
+        }
+    }, true) ;
+    
+    // ================ coder class interface ====================
+    MSTools.MSTE.Encoder = function() {
+        this.referenceKey = MSTools.localUniqueID() ;
+        this.tokens = ["MSTE0102", 0, "CRC00000000"] ;
+        this.stream = [] ;
+        this.encodedObjects = [] ;
+        this.keyNames = [] ;
+        this.keysIndexes = {} ;
+        this.classesNames = [] ;
+        this.classesIndexes = {} ;
+        this.stringsIndexes = {} ;
+        this.numbersIndexes = {} ;
+        this.isa = 'MSTECoder' ;
+    } ;
+    
+    // ================  coder instance methods =============
+    MSTools.defineInstanceMethods(MSTools.MSTE.Encoder,
+    {
+        shouldPushObject:function(o) {
+            var identifier = o[this.referenceKey] ;
+    
+            if ($ok(identifier)) { this.stream.push(9) ; this.stream.push(identifier) ; return false ;}
+    
+            identifier = this.encodedObjects.length ;
+    
+            Object.defineProperty(o, this.referenceKey, {
+                enumerable:false,
+                configurable:true, // so it could be later deleted
+                writable:false,
+                value:identifier
+            }) ;
+            this.encodedObjects[identifier] = o ;
+    
+            return true ;
+        },
+        push:function(anItem) { this.stream.push(anItem) ; },
+        pushKey:function(aKey) {
+            var index = this.keysIndexes[aKey] ;
+            if (!$ok(index)) {
+                index = this.keyNames.length ;
+                this.keyNames[index] = aKey ;
+                this.keysIndexes[aKey] = index ;
+            }
+            this.stream.push(index) ;
+        },
+        pushClass:function(aClass) {
+            var index = this.classesIndexes[aClass] ;
+            if (!$ok(index)) {
+                index = this.classesNames.length ;
+                this.classesNames[index] = aClass ;
+                this.classesIndexes[aClass] = index ;
+            }
+            this.stream.push(50 + index) ;
+        },
+        pushNumber: function(aNumber) {
+            var key = aNumber.toString(32) ; // yeah, less chars with 32 digits
+            var index = this.numbersIndexes[key] ;
+            if ($ok(index)) {
+                this.stream.push(9) ;
+                this.stream.push(index) ;
+            }
+            else {
+                index = this.encodedObjects.length ;
+                this.numbersIndexes[key] = index ;
+                this.encodedObjects[index] = null ; // we don't want to remove a non existant property at the end
+                this.stream.push(20) ;
+                this.stream.push(aNumber) ;
+            }
+        },
+        pushString: function(aString) {
+            var key = aString.length < 64 ? aString : ("0000000" + (aString.hashCode() >>> 0).toString(16)).substr(-8) ;
+            var index, array = this.stringsIndexes[key] ;
+            if ($ok(array)) {
+                var count = array.length, i ;
+                for (i = 0 ; i < count ; i++) {
+                    if (aString === array[i].string) { break ; }
+                }
+                if (i < count) {
+                    this.stream.push(9) ;
+                    this.stream.push(array[i].index) ;
+                }
+                else {
+                    index = this.encodedObjects.length ;
+                    array.push({string:aString, index:index}) ;
+                    this.encodedObjects[index] = null ; // we don't want to remove a non existant property at the end
+                    this.stream.push(21) ;
+                    this.stream.push(aString) ;
+                }
+            }
+            else {
+                index = this.encodedObjects.length ;
+                this.stringsIndexes[key] = [{string:aString, index:index}] ;
+                this.encodedObjects[index] = null ; // we don't want to remove a non existant property at the end
+                this.stream.push(21) ;
+                this.stream.push(aString) ;
+            }
+        },
+        encodeObject:function(o) {
+            if ($ok(o)) {
+                if (typeof o.toMSTE === 'function') {
+                    //console.log('encodeObject:'+o.isa) ;
+                    //console.log('--> has MSTE function') ;
+                    o.toMSTE(this) ;
+                }
+                else if (this.shouldPushObject(o)) {
+                    var i, count, keys = null, idx, k, v, t, total = 0, customClass = null ;
+    
+                    //console.log('--> pushed on stack') ;
+                    if (typeof o.toMSTEClass === 'function') {
+                        customClass = o.toMSTEClass() ;
+                        if (typeof customClass === "string" && customClass.length) {
+                            this.pushClass(customClass) ;
+                        }
+                        else { customClass = null ; }
+                    }
+                    else { this.stream.push(30) ; } // a standard dictionary
+    
+                    if ((typeof o.msteKeys) === 'function') {
+                        keys = o.msteKeys() ;
+                    }
+    
+                    idx = this.stream.length ;
+                    this.stream[idx] = 0 ;
+    
+                    if ((count = $length(keys)) !== 0) {
+                        // specific mste loop
+                        for (i = 0 ; i < count ; i++) {
+                            k = keys[i] ; v = o[k] ; t = typeof v ;
+                            if (v === null) {
+                                total ++ ;
+                                this.pushKey(k) ;
+                                this.stream.push(0) ;
+                            }
+                            else if (t !== 'function' && t !== 'undefined') {
+                                total ++ ;
+                                this.pushKey(k) ;
+                                this.encodeObject(v) ;
+                            }
+                        }
+                    }
+                    else {
+                        // object standard loop
+                        // //console.log('will encode object '+MSTools.stringify(o)) ;
+                        for (k in o) {
+                            if (k.length && k.charAt(0) >= 'A') {
+                                v = o[k] ; t = typeof v ;
+                                if (v === null) {
+                                    total ++ ;
+                                    this.pushKey(k) ;
+                                    this.stream.push(0) ;
+                                }
+                                else if (t !== 'function' && t !== 'undefined') {
+                                    total ++ ;
+                                    this.pushKey(k) ;
+                                    this.encodeObject(v) ;
+                                }
+                            }
+                        }
+                    }
+                    this.stream[idx] = total ;
+                }
+            }
+            else { this.stream.push(0) ; }
+        },
+        finalizeTokens:function() {
+            var i, ret = this.tokens, a = this.classesNames, count = a.length ;
+    
+            ret.push(count) ;
+            for (i = 0 ; i < count ; i++)  { ret.push(a[i]) ; }
+    
+            a = this.keyNames ; count = a.length ;
+            ret.push(count) ;
+            for (i = 0 ; i < count ; i++)  { ret.push(a[i]) ; }
+    
+            a = this.stream ; count = a.length ;
+            for (i = 0 ; i < count ; i++)  { ret.push(a[i]) ; }
+    
+            this.deleteTemporaryIdentifiers() ;
+            ret[1] = ret.length ;
+    
+            return ret ;
+        },
+        deleteTemporaryIdentifiers:function() {
+            var i, a = this.encodedObjects, count = a.length, elem, k = this.referenceKey ;
+            for (i = 0 ; i < count ; i++) {
+                elem = a[i] ;
+                if (elem !== null) { delete elem[k] ; }
+            }
+            this.stringsIndexes = {} ;
+            this.numbersIndexes = {} ;
+        },
+        encodeException:function(o) { throw "Impossible to encode object of class "+this.className() ; },
+        toMSTE:function(encoder) { encoder.encodeException(this) ; }
+    }, true) ;
+    
+    
+    // ================  MSTE methods =============
+    MSTools.MSTE.parse = function(source, options) {
+        var r = null ;
+        if ($length(source)) {
+            var decoder = new MSTools.MSTE.Decoder(options) ;
+            try {
+                r = decoder.parse(source) ;
+            }
+            catch (e) {
+            //console.log("error "+e+" during MSTE parsing") ; r = null ;
+            }
+        }
+        return r ;
+    } ;
+    
+    MSTools.MSTE.tokenize = function(rootObject) {
+        var encoder = new MSTools.MSTE.Encoder(), r = null ;
+        try {
+            encoder.encodeObject(rootObject) ;
+            r = encoder.finalizeTokens() ;
+        }
+        catch (e) {
+            encoder.deleteTemporaryIdentifiers() ;
+            console.log("error \""+e+"\" encountered during MSTE tokenizing") ;
+            r = null ;
+        }
+    
+        return r ;
+    } ;
+    
+    MSTools.MSTE.stringify = function(rootObject) {
+        var r = this.tokenize(rootObject) ;
+        if (r) {
+            try {
+                r = MSTools.stringify(r) ; // a lightly modified version of crockford stringify implementation
+                // TODO: calculate the CRC after the stringify has been done or maybe remove the CRC once for all...
+            }
+            catch (e) {
+                console.log("error "+e+" during MSTE stringify") ;
+                r = null ;
+            }
+        }
+        return r ;
+    } ;
 
     /*
         This file is a direct copy with some modifications of a part of the file    json2.js form M. Crockford. Thanks to him to release that as public domain.
@@ -3140,8 +4531,6 @@ var MSTools = (function(global) {
     */
     
     (function () {
-        'use strict';
-    
     
         // escapable was modified from initial json2.js in order to escape all control characters and all characters with diacritics signs
         var escapable = /[\\\"\x00-\x1f\u007f-\uffff]/g,
@@ -3375,1420 +4764,33 @@ var MSTools = (function(global) {
     
     
 
+    MSTools.makeGlobal = function(g) {
+        if (!g && typeof window === "object") { g= window; }
+        if (!g && typeof global === "object") { g= global; }
+        g.MSTools = MSTools;
+        g.$ok = $ok;
+        g.$length = $length;
+        g.$div = $div;
+        g.$equals = $equals;
+        g.$type = $type;
+        g.MSColor = MSColor;
+        g.MSDate = MSDate;
+        g.MSArray = MSArray;
+        g.MSData = MSData;
+        g.MSNaturalArray = MSNaturalArray;
+        g.MSCouple = MSCouple;
+    };
+    MSTools.makeGlobal(MSTools);
 
-    // TODO: export for node.js module and on-browser amd-style require()
-
-    return MSTools;
-})(this);
-
-// ========= new classes ==========
-// ================ class interface ====================
-function MSDate()
-{
-    var n = arguments.length, tmp ;
-    if (n >= 3) {
-        var i ;
-        if (!MSDate.validDate(arguments[0], arguments[1], arguments[2])) { throw "Bad MSDate() day arguments" ; }
-        if (n !== 3 && n !== 6 ) { throw "Impossible to initialize a new MSDate() with "+n+" arguments" ; }
-        if (n === 6) {
-            if (!MSDate.validTime(arguments[3], arguments[4], arguments[5])) { throw "Bad MSDate() time arguments" ; }
-            this.interval = MSDate.intervalFrom(arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5] | 0) ;
-        }
-        else {
-            this.interval = MSDate.intervalFrom(arguments[0], arguments[1], arguments[2], 0, 0, 0) ;
-        }
-        return ;
+    if ( typeof define === "function" && define.amd ) { // with AMD module
+        define( "MSTools", [], function() {
+            return MSTools;
+        });
     }
-    else if (n === 2) { throw "Impossible to initialize a new MSDate() with 2 arguments" ; }
-    else if (n === 1) {
-        var t = arguments[0] ;
-        if ($ok(t)) {
-            switch (t.isa) {
-                case 'Date': tmp = t ; break ;
-                case 'MSDate': this.interval = t.interval ; return ;
-                case 'Number':
-                    if (!Number.isInteger(t)) { throw "Impossible to initialize a new MSDate() with a non integer number" ; }
-                    this.interval = t ;
-                    return ;
-                default:
-                    t = Number(t) ;
-                    if (!Number.isInteger(t)) { throw "Impossible to initialize a new MSDate() with a non integer number representation" ; }
-                    this.interval = t ;
-                    return ;
-            }
-        }
-        else { tmp = new Date() ; }
+    else if ( typeof module === "object" && typeof module.exports === "object" ) {
+        module.exports = MSTools;
     }
-    else { tmp = new Date() ; }
-
-    this.interval = MSDate.intervalFrom(tmp.getFullYear(), tmp.getMonth()+1, tmp.getDay(), tmp.getHours(), tmp.getMinutes(), tmp.getSeconds()) ;
-}
-
-// ================ constants ====================
-MSTools.defineHiddenConstants(MSDate,{
-    DaysFrom00000229To20010101:730792,
-    DaysFrom00010101To20010101:730485,
-    SecsFrom00010101To20010101:63113904000,
-    SecsFrom19700101To20010101:978307200,
-    DaysInMonth:[0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
-    DaysInPreviousMonth:[0, 0, 0, 0, 31, 61, 92, 122, 153, 184, 214, 245, 275, 306, 337]
-}, true) ;
-MSTools.defineHiddenConstant(MSDate.prototype,'isa', 'MSDate', true) ;
-
-// ================= class methods ===============
-MSTools.defineMethods(MSDate, {
-    isLeapYear:function(y) { return (y % 4 ? false : ( y % 100 ? (y > 7 ? true : false) : (y % 400 || y < 1600 ? false : true))) ; },
-    validDate:function(year, month, day) {
-        if (!Number.isInteger(day) || !Number.isInteger(month) || !Number.isInteger(year) || day < 1 || month < 1 || month > 12) { return false ; }
-        if (day > MSDate.DaysInMonth[month]) { return (month === 2 && day === 29 && MSDate.isLeapYear(year)) ? true : false ; }
-        return true ;
-    },
-    validTime:function(hour, minute, second) {
-        return (Number.isInteger(hour) && Number.isInteger(minute) && !isNaN(second) && hour >= 0 && hour < 24 && minute >= 0 && minute < 60 && second >= 0 && second < 60) ? true : false ;
-    },
-    intervalFromYMD:function(year, month, day) {
-        var leaps ;
-        month = 0 | month ;
-        if (month < 3) { month += 12; year--; }
-
-        leaps = Math.floor(year/4) - Math.floor(year/100) + Math.floor(year/400);
-
-        return Math.floor((day + MSDate.DaysInPreviousMonth[month] + 365 * year + leaps - MSDate.DaysFrom00000229To20010101) * 86400) ;
-    },
-    intervalFrom:function(year, month, day, hours, minutes, seconds) {
-        return MSDate.intervalFromYMD(year, month, day) + hours * 3600 + minutes * 60 + seconds ;
-    },
-    timeFromInterval:function(t) { return ((t+MSDate.SecsFrom00010101To20010101) % 86400) ; },
-    dayFromInterval:function(t) { return Math.floor((t - MSDate.timeFromInterval(t))/86400) ; },
-    secondsFromInterval:function(t) { return ((t+MSDate.SecsFrom00010101To20010101) % 60) ; },
-    minutesFromInterval:function(t) { return $div(Math.floor((t+MSDate.SecsFrom00010101To20010101) %  3600),  60) ; },
-    hoursFromInterval:function(t) { return $div(Math.floor((t+MSDate.SecsFrom00010101To20010101) %  86400),  3600) ; },
-    dayOfWeekFromInterval:function(t, offset) {
-        offset = offset || 0 ;
-        return (MSDate.dayFromInterval(t)+MSDate.DaysFrom00010101To20010101 + 7 - (offset % 7)) % 7;
-    },
-    componentsWithInterval:function(interval) {
-        var ret, Z, gg, CENTURY, CENTURY_MQUART, ALLDAYS, Y, Y365, DAYS_IN_Y, MONTH_IN_Y ;
-
-        Z =                  MSDate.dayFromInterval(interval) + MSDate.DaysFrom00000229To20010101 ;
-        gg =                 Z - 0.25 ;
-        CENTURY =            Math.floor(gg/36524.25) ;
-        CENTURY_MQUART =     CENTURY - Math.floor(CENTURY/4) ;
-        ALLDAYS =            gg + CENTURY_MQUART ;
-        Y =                  Math.floor(ALLDAYS / 365.25) ;
-        Y365 =               Math.floor(Y * 365.25) ;
-        DAYS_IN_Y =          CENTURY_MQUART + Z - Y365 ;
-        MONTH_IN_Y =         Math.floor((5 * DAYS_IN_Y + 456)/153) ;
-
-        ret = {
-            day:Math.floor(DAYS_IN_Y - Math.floor((153*MONTH_IN_Y - 457) / 5)),
-            hour:MSDate.hoursFromInterval(interval),
-            minute:MSDate.minutesFromInterval(interval),
-            seconds:MSDate.secondsFromInterval(interval),
-            dayOfWeek:((Z + 2) % 7)
-        } ;
-
-        if (MONTH_IN_Y > 12) {
-            ret.month = MONTH_IN_Y - 12 ;
-            ret.year = Y + 1 ;
-        }
-        else {
-            ret.month = MONTH_IN_Y ;
-            ret.year = Y ;
-        }
-        return ret ;
-    },
-    dateWithInt:function(decimalDate) {
-        if ($ok(decimalDate)) {
-            decimalDate = decimalDate.toInt() ;
-            var day = decimalDate % 100 ;
-            var month = $div((decimalDate % 10000),100) ;
-            var year = $div(decimalDate, 10000) ;
-            if (MSDate.validDate(year, month, day)) { return new MSDate(year, month, day) ; }
-        }
-        return null ;
-    },
-    _lastDayOfMonth:function(year,month) { return (month === 2 && MSDate.isLeapYear(year)) ? 29 : MSDate.DaysInMonth[month]; }, // not protected. use carrefully
-    _yearRef:function(y, offset) {
-        var firstDayOfYear = MSDate.intervalFromYMD(y, 1, 1),
-            d = MSDate.dayOfWeekFromInterval(firstDayOfYear, offset) ;
-
-        d = (d <= 3 ? -d : 7-d ); // Day of the first week
-        return firstDayOfYear + d * 86400 ;
+    else {  // if no AMD module
+        MSTools.makeGlobal(window);
     }
-}, true) ;
-// ================  instance methods =============
-MSTools.defineInstanceMethods(MSDate, {
-    components: function() { return MSDate.componentsWithInterval(this.interval) ; },
-    valueOf: function() { return this.interval ; },
-    toNumber: function() { return this.interval ; },
-    toString: function() { // returns the ISO 8601 representation without any timezone
-        function f(n) { return n < 10 ? '0' + n : n; } // Format integers to have at least two digits.
-
-        var c = this.components() ;
-        return ($ok(c) ?
-                c.year + '-' +
-                f(c.month) + '-' +
-                f(c.day) + 'T' +
-                f(c.hour)     + ':' +
-                f(c.minute)   + ':' +
-                f(c.seconds)
-            : null);
-    },
-    isEqualTo: function(other, options) {
-        if (this === other) { return true ; }
-        if ($ok(other)) {
-            if (this.isa === other.isa && this.interval === other.interval) { return true ; }
-            // should we equals to normal javascript dates ?
-        }
-        return false ;
-    },
-    isLeap: function() { var c = this.components() ; return c !== null ? MSDate.isLeapYear(c.year) : false ; },
-
-    yearOfCommonEra:function() { var c = this.components() ; return c !== null ? c.year : NaN ; },
-
-    monthOfYear:function() { var c = this.components() ; return c !== null ? c.month : NaN ; },
-    weekOfYear:function(offset) {
-        // In order to follow ISO 8601 week begins on monday and must have at
-        // least 4 days (i.e. it must includes thursday)
-        var reference, w, c = this.components() ; if (c === null) { return NaN ; }
-        offset = offset || 0 ;
-        offset %= 7;
-
-        reference = MSDate._yearRef(c.year, offset) ;
-        if (this.interval < reference) { // De l'année d'avant
-            reference = MSDate._yearRef(c.year - 1, offset);
-            w = Math.floor((this.interval - reference) / (86400*7)) + 1 ;
-        }
-        else {
-            w = Math.floor((this.interval - reference) / (86400*7)) + 1 ;
-            if (w === 53) {
-                reference += 52 * 7 * 86400 ;
-                c = MSDate.componentsWithInterval(reference) ;
-                if (c.day >= 29) { w = 1 ; }
-            }
-        }
-        return w ;
-    },
-    dayOfYear:function() {
-        var c = this.components() ; if (c === null) { return NaN ; }
-        return Math.floor((this.interval - MSDate.intervalFromYMD(c.year, 1, 1))/86400)+1 ;
-    },
-
-    dayOfMonth:function() { var c = this.components() ; return c !== null ? c.day : NaN ; },
-    lastDayOfMonth:function() { var c = this.components() ; return c !== null ? MSDate._lastDayOfMonth(c.year, c.month) : NaN ; },
-
-    dayOfWeek:function(offset) { return MSDate.dayOfWeekFromInterval(this.interval, offset) ; },
-
-    hourOfDay:function() { return MSDate.hoursFromInterval(this.interval) ; },
-    secondOfDay:function() { return MSDate.timeFromInterval(this.interval) ; },
-
-    minuteOfHour:function() { return MSDate.minutesFromInterval(this.interval) ; },
-
-    secondOfMinute:function() { return MSDate.secondsFromInterval(this.interval) ; },
-
-    dateWithoutTime: function() { return new MSDate(this.interval - MSDate.timeFromInterval(this.interval)) ; },
-    dateOfFirstDayOfYear: function() { var c = this.components() ; return c !== null ? new MSDate(c.year,1, 1) : null ; },
-    dateOfLastDayOfYear: function() { var c = this.components() ; return c !== null ? new MSDate(c.year,12, 31) : null ; },
-    dateOfFirstDayOfMonth: function() { var c = this.components() ; return c !== null ? new MSDate(c.year, c.month, 1) : null ; },
-    dateOfLastDayOfMonth: function() { var c = this.components() ; return c !== null ? new MSDate(c.year, c.month, MSDate._lastDayOfMonth(c.year, c.month)) : null ; },
-
-    toInt: function() {
-        var c = this.components() ;
-        return c === null ? 0 : (c.year < 0 ? -1 : 1) * (c.year < 0 ? -c.year : c.year) * 10000 + c.month * 100 + c.day ;
-    },
-    toUInt: function() {
-        var c = this.components() ;
-        return c === null || c.year < 0 ? 0 : c.year * 10000 + c.month * 100 + c.day ;
-    },
-    toDate: function() {
-        var c = this.components() ;
-        return c !== null ? new Date(c.year, c.month - 1, c.day, c.hour, c.minute, c.second, 0) : null ;
-    },
-    toJSON: function (key) {
-        var d = this.toDate() ;
-        return d !== null ? d.toJSON(key) : null ;
-    },
-    toArray: function() {
-        var c = this.components() ;
-        return c != null ? [c.year, c.month, c.day, c.hour, c.minute, c.seconds, c.dayOfWeek] : null ;
-    },
-    toMSTE: function(encoder) {
-        if (encoder.shouldPushObject(this)) {
-            encoder.push(22) ;
-            encoder.push(this.interval + MSDate.SecsFrom19700101To20010101) ;
-        }
-    }
-
-}, true) ;
-// MSArray is a generic array subclass designed to be subclassed
-// MSNaturalArray and MSData are both subclasses of MSArray
-
-// ================ class interface ====================
-
-// with this constructor a new MSArray(10) creates a data with number 10 at position 0
-// any array passed as an argument will be concatenated
-
-
-function MSArray() {
-    var a, ret = [], i, count = arguments.length ;
-    var localConstructor = this.constructor ;
-
-    Object.setPrototypeOf(ret, localConstructor.prototype) ;
-
-    for (i = 0 ; i < count ; i++) {
-        a = arguments[i] ;
-        if ($ok(a) && a.isArray) { localConstructor.prototype.push.apply(ret, a) ; }
-        else { ret.push(a) ; }
-    }
-    return ret ;
-}
-
-MSArray.prototype = Object.create(Array.prototype, { constructor: {value: MSArray} });
-
-// ================ constants ====================
-
-// ================= class methods ===============
-
-// ================  instance methods =============
-MSTools.defineInstanceMethods(MSArray, {
-    unshift: function() {
-        var count = arguments.length ;
-        if (count) {
-            var F = this.constructor, i, n = new F() ;
-            for (i = 0 ; i < count ; i++) { n.push(arguments[i]) ; }
-            return Array.prototype.unshift.apply(this, n) ; // unshift
-        }
-        return this.length ;
-    },
-    concat: function() {
-        var F = this.constructor ;
-        var ret = new F(this), i, count = arguments.length, p = F.prototype.push ;
-        for (i = 0 ; i < count ; i++) { p.apply(ret, arguments[i]) ; }
-        return ret ;
-    },
-    slice: function(start,end) {
-        // console.log("want to slice "+MSTools.stringify(this)+" from "+start+" to "+end) ;
-        var ret = Array.prototype.slice.call(this, start, end) ;
-        Object.setPrototypeOf(ret, Object.getPrototypeOf(this)) ;
-        return ret ;
-    },
-    splice: function(index, n) {
-        var a = [index, n], o, i, count = arguments.length, ret, p = this.constructor.prototype.push ;
-        if (count > 2) {
-            for (i = 2 ; i < count ; i++) { p.call(a, arguments[i]) ; }
-        }
-        ret =  Array.prototype.splice.apply(this, a) ;
-        Object.setPrototypeOf(ret, Object.getPrototypeOf(this)) ;
-        return ret ;
-    },
-    filter: function() {
-        var ret =  Array.prototype.filter.apply(this, arguments) ;
-        Object.setPrototypeOf(ret, Object.getPrototypeOf(this)) ;
-        return ret ;
-    }
-}, true) ;
-
-
-
-// ================ class interface ====================
-/* global MSArray */
-function MSNaturalArray() { return MSArray.apply(this, arguments); }
-
-MSNaturalArray.prototype = Object.create(MSArray.prototype, { constructor: {value: MSNaturalArray} });
-
-// ================ constants ====================
-MSTools.defineHiddenConstants(MSNaturalArray.prototype, {
-    isa:'Naturals',
-    MSTECode:26
-}, true) ;
-
-// ================= class methods ===============
-
-// ================  instance methods =============
-MSTools.defineInstanceMethods(MSNaturalArray, {
-    objectAtIndex: function(i) {
-        var v = this[i] ;
-        return $ok(v) ? v.toUInt() : 0 ;
-    },
-    push: function() {
-        var o, i, count = arguments.length ;
-        //console.log('MSNaturalArray push with '+arguments.length+' args.') ;
-        for (i = 0 ; i < count ; i++) {
-            o = arguments[i] ;
-            o = $ok(o) ? o.toUInt() : 0 ;
-            if ($ok(o)) { Array.prototype.push.call(this, o) ; }
-        }
-    }
-    // unshift(), concat(), slice(), filter(), splice() and toMSTE() are inherited from MSArray
-}, true) ;
-
-
-
-
-// ================ class interface ====================
-/* global MSArray */
-
-// with this constructor a new MSData(10) creates a data with the byte '10' at first position
-// any array passed as an argument will be concatenated
-function MSData() {
-    var a, ret = new MSArray(), i, count = arguments.length ;
-    var localConstructor = this.constructor ;
-
-    Object.setPrototypeOf(ret, localConstructor.prototype) ;
-
-    // console.log('wanted to create a data new with '+count+' arguments :') ;
-    if (count === 1 && (typeof (a = arguments[0])) === 'string') {
-        count = a.length ;
-        for (i = 0 ; i < count ; i++) { ret.push(a.charCodeAt(i) & 0xff) ; }
-    }
-    else {
-        for (i = 0 ; i < count ; i++) {
-            a = arguments[i] ;
-            //console.log('arguments['+i+']=<'+a+'> ('+(typeof a)+')') ;
-            if ($ok(a) && a.isArray) { localConstructor.prototype.push.apply(ret, a) ; }
-            else { ret.push(a) ; }
-        }
-    }
-    return ret ;
-}
-
-MSData.prototype = Object.create(MSArray.prototype, { constructor: {value: MSData} });
-
-// ================ constants ====================
-MSTools.defineHiddenConstant(MSData.prototype,'isa', 'Data', true) ;
-MSTools.defineConstants(MSData, {
-    EMPTY_DATA:new MSData()
-}, true) ;
-
-MSTools.defineHiddenConstants(MSData, {
-    __base64Tokens:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",
-    __base64Index:[
-    -2, -2, -2, -2, -2, -2, -2, -2, -2, -1, -1, -2, -2, -1, -2, -2,
-    -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
-    -1, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, 62, -2, -2, -2, 63,
-    52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -2, -2, -2, -2, -2, -2,
-    -2,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14,
-    15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -2, -2, -2, -2, -2,
-    -2, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
-    41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -2, -2, -2, -2, -2
-    ],
-    __base64URLTokens:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_",
-    __base64URLIndex:[
-    -2, -2, -2, -2, -2, -2, -2, -2, -2, -1, -1, -2, -2, -1, -2, -2,
-    -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
-    -1, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, 62, -2, -2,
-    52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -2, -2, -2, -2, -2, -2,
-    -2,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14,
-    15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -2, -2, -2, -2, 63,
-    -2, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
-    41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -2, -2, -2, -2, -2
-    ],
-    __base64PaddingChar:'=',
-    __base64DecodeFn:[
-    function(result, array, dc) { array[0] = (dc << 2) & 0xff ; },
-    function(result, array, dc) { array[0] |= dc >> 4 ; array[1] = ((dc & 0x0f) << 4) & 0xff ; },
-    function(result, array, dc) { array[1] |= dc >> 2 ; array[2] = ((dc & 0x03) << 6) & 0xff ; },
-    function(result, array, dc) {
-        array[2] |= dc ;
-        result.push(array[0], array[1], array[2]) ;
-        array[0] = array[1] = array[2] = 0 ;
-    },
-    ]
-    }, true) ;
-
-// ================= class methods ===============
-MSTools.defineMethods(MSData, {
-    dataWithBase64String: function(s, index, paddingChar) {
-        var result = null ;
-        if ((typeof s) === 'string') {
-            var len = s.length ;
-            result = new MSData() ;
-            if (len > 0) {
-                var j, i = 0, c, dc, array = [] ;
-
-                array[0] = array[1] = array[2] = 0 ;
-
-                index = index || MSData.__base64Index ;
-                paddingChar = paddingChar || MSData.__base64PaddingChar ;
-                paddingChar = paddingChar.charCodeAt(0) ;
-
-                for (j = 0 ; j < len ; j++) {
-                    c = s.charCodeAt(j) ;
-                    if (c === paddingChar) { break; }
-                    else if (c > 127) { return null ; } // bad character
-
-                    dc = index[c] ;
-                    if (dc === -1) { continue ; } // we skip spaces and separators
-                    else if (dc === -2) { return null ; } // bad character
-
-                    MSData.__base64DecodeFn[i % 4](result, array, dc) ;
-                    i++ ;
-                }
-                if (c === paddingChar) {
-                    i = i % 4;
-                    if (i === 1) { return null ; }
-                    i-- ;
-                    for (j = 0 ; j < i ; j++) { result.push(array[j]) ; }
-                }
-            }
-        }
-        return result ;
-    }
-}, true) ;
-
-// ================  instance methods =============
-MSTools.defineInstanceMethods(MSData, {
-    // to spead data implementation we did rewrite the byteAtIndex and the objectAtIndex method
-    byteAtIndex: function(i) { var v = Number(this[i]) ; return v > 0 ? v & 0xff : 0 ; }, // works because NaN > 0 is false
-    objectAtIndex: function(i) { var v = Number(this[i]) ; return v > 0 ? v & 0xff : 0 ; },
-    push: function() {
-        var o, i, count = arguments.length ;
-        for (i = 0 ; i < count ; i++) {
-            // console.log('push('+arguments[i]+') '+(typeof arguments[i])) ;
-            o = Number(arguments[i]) ; if (o < 0) { o = 0 ;}
-            Array.prototype.push.call(this, o & 0xff) ;
-        }
-    },
-    // unshift, concat, slice, filter and splice are inherited from MSArray
-    toString: function() {
-        var i, count = this.length ;
-        if (count) {
-            var array = [] ;
-            // console.log("count = "+count) ;
-            for (i = 0 ; i < count ; i++) {
-                array.push(String.fromCharCode(this.byteAtIndex(i))) ;
-            }
-            return array.join('') ;
-        }
-        return String.EMPTY_STRING ;
-    },
-    toBase64String: function(tokens, paddingChar) {
-        var i, end, array, token ;
-
-        tokens = tokens || MSData.__base64Tokens ;
-        paddingChar = paddingChar || MSData.__base64PaddingChar ;
-
-        if (this.length === 0) { return '' ; }
-
-        end = this.length - this.length % 3 ;
-        array = [] ;
-
-        for (i = 0 ; i < end ; i += 3) {
-
-            token = (this.byteAtIndex(i) << 16) | (this.byteAtIndex(i+1) << 8) | this.byteAtIndex(i+2) ;
-
-            array.push(tokens.charAt(token >> 18)) ;
-            array.push(tokens.charAt((token >> 12) & 0x3F)) ;
-            array.push(tokens.charAt((token >> 6) & 0x3f)) ;
-            array.push(tokens.charAt(token & 0x3f)) ;
-        }
-
-        switch (this.length - end) {
-            case 1:
-                token = this.byteAtIndex(i) << 16 ;
-                array.push(tokens.charAt(token >> 18) + tokens.charAt((token >> 12) & 0x3F) + paddingChar + paddingChar );
-                break;
-            case 2:
-                token = (this.byteAtIndex(i) << 16) | (this.byteAtIndex(i+1) << 8) ;
-                array.push(tokens.charAt(token >> 18) + tokens.charAt((token >> 12) & 0x3F) + tokens.charAt((token >> 6) & 0x3F) + paddingChar);
-                break ;
-        }
-        return array.join("") ;
-    },
-    toMSTE: function(encoder) {
-        if (this.length === 0) { encoder.push(4) ; }
-        else if (encoder.shouldPushObject(this)) {
-            encoder.push(25) ;
-            encoder.push(this.toBase64String()) ;
-        }
-    },
-    hashCode: function() {
-        // we use the same hash than strings
-        var i, hash = 0, count = this.length ;
-        for (i = 0; i < count; i++) {
-            hash  = ((hash << 5) - hash) + this.byteAtIndex(i) ;
-            hash = hash & hash; // Convert to 32bit integer
-        }
-        return hash;
-    }
-}, true) ;
-
-// ================ class interface ====================
-function MSColor(r,g,b,a)
-{
-    if (typeof r === 'string') {
-        var s, bits, ok = true ;
-        r = r.replace(/ /g,'') ;
-        if (!$length(r)) { ok = false ; }
-        if (ok && r.charAt(0) === '#') { r = r.substr(1); }
-        if (ok && $length(r) < 3) { ok = false ; }
-        if (ok) {
-            r = r.toLowerCase();
-            s = MSColor.namedColors[r] ;
-
-            bits = MSColor.colorStringRegex.exec(s?s:r);
-            if ($length(bits) !== 4) {
-                bits = MSColor.shortColorStringRegex.exec(s?s:r);
-                if ($length(bits) !== 4) { ok = false ; }
-            }
-            if (ok) {
-                this.red = parseInt(bits[1], 16) & 255 ;
-                this.green =  parseInt(bits[2], 16) & 255 ;
-                this.blue =  parseInt(bits[3], 16) & 255 ;
-            }
-        }
-        if (!ok) {
-            this.red = this.green = this.blue = 0 ;
-        }
-        this.alpha = 255 ;
-    }
-    else {
-        r = r.toUInt() ;
-        if ($ok(g) && $ok(b)) {
-            this.red = r & 255 ;
-            this.green = g.toUInt() & 255 ;
-            this.blue = b.toUInt() & 255 ;
-            this.alpha = $ok(a) ? a.toUInt() & 255 : 255 ;
-        }
-        // should we throw if we only have two args ?
-        else {
-            // the 4 bytes contains the RTGB value TTRRGGBB where TT is the transparency (0 means opaque)
-            this.alpha = 0xff - ((r >> 24) & 0xff) ;
-            this.red = (r >> 16) & 0xff ;
-            this.green = (r >> 8) & 0xff ;
-            this.blue = r & 0xff ;
-        }
-    }
-}
-
-// ================ constants ====================
-MSTools.defineConstants(MSColor,{
-    RED:new MSColor(0xff,0,0),
-    GREEN:new MSColor(0,0xff,0),
-    YELLOW:new MSColor(0xff,0xff,0),
-    BLUE:new MSColor(0,0,0xff),
-    CYAN:new MSColor(0,0xff,0xff),
-    MAGENTA:new MSColor(0xff,0,0xff),
-    WHITE:new MSColor(0xff, 0xff, 0xff),
-    BLACK:new MSColor(0,0,0)
-}, true) ;
-
-MSTools.defineHiddenConstants(MSColor, {
-    colorStringRegex:/^(\w{2})(\w{2})(\w{2})$/,
-    shortColorStringRegex:/^(\w{1})(\w{1})(\w{1})$/,
-    namedColors:{
-        beige: 'f5f5dc',
-        black: '000000',
-        blue: '0000ff',
-        brown: 'a52a2a',
-        cyan: '00ffff',
-        fuchsia: 'ff00ff',
-        gold: 'ffd700',
-        gray: '808080',
-        green: '008000',
-        indigo : '4b0082',
-        ivory: 'fffff0',
-        khaki: 'f0e68c',
-        lavender: 'e6e6fa',
-        magenta: 'ff00ff',
-        maroon: '800000',
-        olive: '808000',
-        orange: 'ffa500',
-        pink: 'ffc0cb',
-        purple: '800080',
-        red: 'ff0000',
-        salmon: 'fa8072',
-        silver: 'c0c0c0',
-        snow: 'fffafa',
-        teal: '008080',
-        tomato: 'ff6347',
-        turquoise: '40e0d0',
-        violet: 'ee82ee',
-        wheat: 'f5deb3',
-        white: 'ffffff',
-        yellow: 'ffff00'
-    },
-    HSBToRGB:[
-        function (brightness, p, q, t) { return new MSColor(brightness, t, p) ; },
-        function (brightness, p, q, t) { return new MSColor(q, brightness, p) ; },
-        function (brightness, p, q, t) { return new MSColor(p, brightness, t) ; },
-        function (brightness, p, q, t) { return new MSColor(p, q, brightness) ; },
-        function (brightness, p, q, t) { return new MSColor(t, p, brightness) ; },
-        function (brightness, p, q, t) { return new MSColor(brightness, p, q) ; },
-        function (brightness, p, q, t) { return new MSColor(brightness, t, p) ; }
-    ]
-
-}, true) ;
-
-MSTools.defineHiddenConstant(MSColor.prototype,'isa', 'Color', true) ;
-
-// ================= class methods ===============
-MSTools.defineMethods(MSColor, {
-    lighter: function(X) { X /= 255.0 ; return Math.round((2.0*(X)*(X)/3.0+(X)/2.0+0.25)*255) ; },
-    darker: function(X) { X /= 255.0 ; return Math.round((-(X)*(X)/3+5.0*(X)/6.0)*255) ; },
-    colorWithHSB: function(hue, saturation, brightness) {
-        if (typeof hue === "object" && "h" in hue && "s" in hue && "b" in hue) {
-            brightness = hue.b;
-            saturation = hue.s;
-            hue = hue.h;
-        }
-        if (brightness !== 0) {
-            var i = (Math.max(0, Math.floor(hue * 6))) % 7,
-                f = (hue * 6) - i,
-                p = brightness * (1 - saturation),
-                q = brightness * (1 - (saturation * f)),
-                t = brightness * (1 - (saturation * (1 - f))) ;
-            return MSColor.HSBToRGB[i](brightness, p, q, t) ;
-        }
-        return MSColor.BLACK ;
-    }
-}, true) ;
-
-// ================  instance methods =============
-MSTools.defineInstanceMethods(MSColor, {
-    luminance:function () { return (0.3*this.red + 0.59*this.green +0.11*this.blue)/255.0 ; },
-    isPale:function() { return this.luminance() > 0.6 ? true : false ; },
-
-    lighterColor: function() { return new MSColor(MSColor.lighter(this.red), MSColor.lighter(this.green), MSColor.lighter(this.blue), this.alpha) ; },
-    darkerColor: function() { return new MSColor(MSColor.darker(this.red), MSColor.darker(this.green), MSColor.darker(this.blue), this.alpha) ; },
-    lightest: function() {
-        return new MSColor(MSColor.darker(MSColor.darker(this.red)), MSColor.darker(MSColor.darker(this.green)), MSColor.darker(MSColor.darker(this.blue)), this.alpha) ;
-    },
-    darkest: function() {
-        return new MSColor(MSColor.darker(MSColor.darker(this.red)), MSColor.darker(MSColor.darker(this.green)), MSColor.darker(MSColor.darker(this.blue)), this.alpha) ;
-    },
-    matchingColor:function() { return this.isPale() ? this.darkestColor() : MSColor.whiteColor ; },
-    toString:function() {
-        return this.alpha === 255 ? '#'+this.red.toHexa(2)+this.green.toHexa(2)+this.blue.toHexa(2) : "rgba("+this.red+","+this.green+","+this.blue+","+(this.alpha/255.0)+")" ;
-    },
-    toNumber:function() { return ((0xff - this.alpha) * 16777216) + (this.red * 65536) + (this.green * 256) + this.blue ;},
-    toInt:function() { return (this.red * 65536) + (this.green * 256) + this.blue ; }, // the toInt function does not use the transparency because it should overflow the signed 32 bits
-    toRGBA:function() { return (this.red * 16777216) + (this.green*65536) + (this.blue * 256) + this.alpha ;},
-    toHSB:function() {
-        var red = this.red / 255, green = this.green / 255, blue = this.blue / 255 ;
-        var max = Math.max(red, green, blue), min = Math.min(red, green, blue) ;
-        var hue = 0, saturation = 0, brightness = max ;
-        if (min < max) {
-            var delta = (max - min);
-            saturation = delta / max;
-            if (red === max) { hue = (green - blue) / delta ; }
-            else if (green === max) { hue = 2 + ((blue - red) / delta) ; }
-            else { hue = 4 + ((red - green) / delta); }
-            hue /= 6;
-            if (hue < 0) { hue += 1 ; }
-            if (hue > 1) { hue -= 1 ; }
-        }
-        return {h: hue, s: saturation, b: brightness} ;
-    },
-    isEqualTo: function(other, options) {
-        if (this === other) { return true ; }
-        return $ok(other) && this.isa === other.isa && this.toRGBA() === other.toRGBA() ? true : false ;
-    },
-    toArray: function() { return [this.red, this.green, this.blue, this.alpha] ; },
-    toMSTE: function(encoder) {
-        if (encoder.shouldPushObject(this)) {
-            encoder.push(24) ;
-            encoder.push(this.toNumber()) ;
-        }
-    }
-}, true) ;
-
-MSTools.defineInstanceMethods(MSColor,{
-    toUInt: MSColor.prototype.toNumber,
-    valueOf: MSColor.prototype.toNumber
-}, true) ;
-
-
-// ================ class interface ====================
-function MSCouple(first, second)
-{
-    this.firstMember = $ok(first) ? first : null ;
-    this.secondMember = $ok(second) ? second : null ;
-}
-
-// ================ constants ====================
-MSTools.defineHiddenConstants(MSCouple.prototype, {
-    isa:'Couple',
-    length:2 // there is always 2 slots even if one of them or both are null (SHOULD WE KEEP THAT ?)
-}, true) ;
-
-// ================= class methods ===============
-
-// ================  instance methods =============
-MSTools.defineInstanceMethods(MSCouple, {
-    toString: function() { return [this.firstMember, this.secondMember].toString() ; },  // the same to string as an array
-    isEqualTo: function(other, options) {
-        if (this === other) { return true ; }
-        return $ok(other) && this.isa === other.isa && $equals(this.firstMember, other.firstMember, options) && $equals(this.secondMember, other.secondMember, options)? true : false ;
-    },
-    toArray: function() { return [this.firstMember, this.secondMember] ; },
-    toMSTE: function(encoder) {
-        if (encoder.shouldPushObject(this)) {
-            var v, i, count = this.length ;
-            encoder.push(32) ;
-            encoder.encodeObject(this.firstMember) ;
-            encoder.encodeObject(this.secondMember) ;
-        }
-    }
-}, true) ;
-
-if (MSTools.degradedMode) {
-    MSTools.defineInstanceMethods(Array, {
-        toInt:function() { return this.toNumber().toInt() ; },
-        toUInt:function(base) { return this.toInt().toUInt() ; }
-    }) ;
-}
-
-// ================ MSTE Singleton ====================
-/* global MSData, MSColor, MSNaturalArray, MSCouple, MSDate */
-
-MSTools.MSTE = {
-    isa:'MSTE',
-    toMSTE:function(encoder) { encoder.encodeException(this) ; },
-    CONSTANTS:[null, true, false, String.EMPTY_STRING, Date.DISTANT_PAST, Date.DISTANT_FUTURE, MSData.EMPTY_DATA],
-    ENGINES:[
-        {
-            states:[
-                0,        1,        2,        106,    106,
-                106,    108,    109,    100,    9,
-                110,    110,    110,    110,    110,
-                110,    110,    110,    110,    110,
-                102,    103,    105,    107,    4,
-                5,        3,        9
-            ],
-            codeNames:[
-                'null', 'true', 'false', 'I-DECIMAL', 'F-DECIMAL',
-                'STRING', 'DATE', 'COLOR', 'DICT', '#REF',
-                'CHAR', 'UCHAR', 'SHORT', 'USHORT', 'INT32',
-                'UINT32', 'INT64', 'UINT64', 'FLOAT', 'DOUBLE',
-                'ARRAY', 'NATURALS', 'COUPLE', 'DATA', 'DISTANT_PAST',
-                'DISTANT_FUTURE', 'EMPTY_STRING', '#WEAK_REF'
-            ],
-            classCode:50,
-            getClassIndex:function(code) { return $div(code - 50,2) ;},
-            validCode:function(code) { return (code > 27 && code < 50) || code < 0 ? false : true ; },
-            version:0x0101
-        },
-        {
-            states:[
-                0,        1,      2,      3,      6,
-                -100,  -100,   -100,   -100,      9,
-                110,    110,    110,    110,    110,
-                110,    110,    110,    110,    110,
-                106,    106,    108,    111,    109,
-                107,    103,   -100,   -100,   -100,
-                100,    102,    105
-            ],
-            codeNames:[
-                'null', 'true', 'false', 'EMPTY_STRING', 'EMPTY_DATA',
-                '** CODE5 **', '** CODE6 **', '** CODE7 **','** CODE8 **', '#REF',
-                'CHAR', 'UCHAR', 'SHORT', 'USHORT', 'INT32',
-                'UINT32', 'INT64', 'UINT64', 'FLOAT', 'DOUBLE',
-                'DECIMAL', 'STRING', 'DATE', 'TIMESTAMP', 'COLOR',
-                'DATA', 'NATURALS', '** CODE27 **', '** CODE28 **', '** CODE29 **',
-                'DICT', 'ARRAY', 'COUPLE'
-            ],
-            classCode:50,
-            getClassIndex:function(code) { return code - 50 ;},
-            validCode:function(code) { return code < 0 || (code > 4 && code < 9) || (code > 26 && code < 30) || (code > 32 && code < 50) ? false : true ; },
-            version:0x0102
-        }
-    ]
-} ;
-
-// ================ decoder class interface ====================
-MSTools.MSTE.Decoder = function(options) {
-    this.isa = 'MSTEDecoder' ;
-    this.keys = [] ;
-    this.tokens = [] ;
-    this.classes = [] ;
-    this.objects = [] ;
-    this.index = 0 ;
-    this.correspondances = null ;
-    this.supportedVersions = [] ;
-    this.root = null ;
-
-    for (var i = 0 ; i < MSTools.MSTE.ENGINES.length ; i++) {
-        this.supportedVersions.push(MSTools.MSTE.ENGINES[i].version) ;
-    }
-    if ($ok(options)) {
-        this.correspondances = options.classes ;
-    }
-} ;
-
-// ================  decoder instance methods =============
-MSTools.defineInstanceMethods(MSTools.MSTE.Decoder, {
-    parse:function(source) {
-        var v, n, i, cn, kn, a ;
-
-        this.tokens = [] ;
-        this.keys = [] ;
-        this.classes = [] ;
-        this.objects = [] ;
-        this.index = 0 ;
-
-        if (typeof source === "string") {
-            a = JSON.parse(source) ;
-        } else {
-            a = source;
-        }
-
-
-        n = $length(a) ;
-        if (n < 4) { throw "Unable to decode MSTE Source : two few tokens" ; }
-
-        this.count = a[1].toUInt() ;
-        if (this.count !== n ) { throw "Unable to decode MSTE Source : bad control count" ;}
-
-        v = a[0] ;
-        if (!v.hasPrefix('MSTE') || (v = this.supportedVersions.indexOf(parseInt(v.slice(4),16))) === -1) {
-            throw "Unable to decode MSTE Source : bad version "+this.tokens[0] ;
-        }
-
-        this.engine = MSTools.MSTE.ENGINES[v] ;
-
-        //console.log('version = MSTE'+this.engine.version.toHexa(4)) ;
-
-        this.crc = a[2] ;
-
-        cn = a[3].toUInt() ;
-        if (5 + cn > n) { throw "Unable to decode MSTE Source : not enough tokens to store classes and a stream" ;}
-        for (i = 0 ; i < cn ; i++) { this.classes[i] = a[4+i] ; }
-
-        kn = a[4+cn].toUInt() ;
-        if (6 + cn + kn > n) { throw "Unable to decode MSTE Source : not enough tokens to store a stream" ;}
-
-        for (i = 0 ; i < kn ; i++) { this.keys[i] = a[5+cn+i] ; }
-
-        this.tokens = a ;
-        this.index = 5+cn+kn ;
-
-        this.decodeStream() ;
-
-        return this.root ;
-    },
-/*
-
-        This is a brand new version of MSTE Reading.
-        It is multi-version compatible and don't use recursive functions
-        (we want to preserve the javascript stack)
-
-        states        description
-        -2              code reading after a dictionary key was read
-        -1            code reading
-
-        0..4        Constants
-
-        9            reference of an object
-
-        100            dictionary reading initialization
-        101            read dictionary key of key-value couple
-        102            array reading initialization
-        103            MSNaturalArray reading initialization
-        104            MSNaturalArray naturals reading
-        105            Couple reading initialization
-        106            String or Decimal number reading
-        107            Base 64 data reading
-        108            Date reading
-        109            Color reading
-        110            Simple (non referenced) numbers
-        111            Time stamp reading
-
-        c             descriptions
-*/
-    decodeStream:function() {
-        var a = this.tokens, i = this.index, n = this.count, count, index ;
-        var code, state = -1, futureClass = null, FutureConstructor = null ;
-        var k, constants = MSTools.MSTE.CONSTANTS, clen = constants.length ;
-        var stack = [], value, currentState = this, futureState = null, hasValue = false ;
-        var engine =  this.engine ;
-
-        currentState = {s:0, i:0, n:1, k:'root', o:this} ;
-        stack.push(currentState) ;
-
-        function dst(v) { return $ok(v) ? ($length(v.isa) ? v.isa : typeof v) : (typeof v === 'undefined' ? 'undefined' : 'NULL') ; }
-
-        while (i < n) {
-            futureState = null ;
-            hasValue = false ;
-            //console.log('---- MSTE automat state : '+state+' stack depth : '+stack.length+'--------------------------') ;
-            //console.log('     index = '+i+', token ['+a[i]+']') ;
-            switch(state) {
-                case -2: // token code reading after a dictionary key was read
-                case -1: // token code reading
-                    if ($ok(currentState.nextState)) {
-                        //console.log('changing state from -1 to '+currentState.nextState) ;
-                        state = currentState.nextState ;
-                        currentState.nextState = null ;
-                        continue ;
-                    }
-                    futureClass = null ;
-                    code = a[i++] ;
-                    if (!engine.validCode(code)) {
-                        throw "Unable to decode MSTE token with code "+code ;
-                    }
-                    else if (code >= engine.classCode) {
-                        futureClass = this.classes[engine.getClassIndex(code)] ;
-                        FutureConstructor = null ;
-                        if (futureClass) {
-                            if (this.correspondances) { FutureConstructor = this.correspondances[futureClass] ; }
-                        }
-                        //console.log('Found a class named <'+futureClass+'>') ;
-                        state = 100 ;
-                        // TODO using future constructor and future class
-                        // with this linearized version it's highly complicated to change already referenced objects...
-                    }
-                    else {
-                        //console.log('     did read code '+code+' ('+engine.codeNames[code]+')') ;
-                        state = engine.states[code] ;
-                        if (state >= 0 && state < clen) {
-                            value = constants[state] ;
-                            //console.log("constant["+state+"]=<"+value+">") ;
-                            hasValue = true ;
-                            state = -1 ;
-                        }
-                    }
-                    break ;
-
-                case 9: // obsolete : compatibility state. weak reference to an object
-                    if (a[i] >= this.objects.length) {
-                        throw "Referenced object " + a[i] + " is out of bounds [0, " + this.objects.length + "[";
-                    }
-                    value = this.objects[a[i++]] ;
-                    hasValue =  true ;
-                    state = -1 ;
-                    break ;
-
-                case 100: // dictionary reading initialization
-                    count = a[i++] ;
-                    if (typeof FutureConstructor === 'function') {
-                        value = new FutureConstructor() ;
-                        //console.log("did define a new object of class "+ value.isa) ;
-                    }
-                    else {
-                        //console.log("Registering new dictionary as "+this.objects.length+"nth object") ;
-                        value = {} ;
-                    }
-                    hasValue = true ;
-                    index = this.objects.length ;
-                    this.objects.push(value) ;
-                    if (count > 0) {
-                        futureState = {s:0, i:0, n:count, o:value, index:index} ;
-                        state = 101 ;
-                    }
-                    else { state = -1 ; }
-                    break ;
-
-                case 101: // read dictionary key
-                    currentState.k = this.keys[a[i++]] ; // the key is a string
-                    //console.log('     did read key \"'+currentState.k+'\"') ;
-                    state = -2 ;
-                    break ;
-
-                case 102: // array reading initialization
-                    count = a[i++] ;
-                    value = [] ;
-                    //console.log("Registering new Array as "+this.objects.length+"nth object") ;
-                    this.objects.push(value) ;
-                    hasValue = true ;
-                    if (count > 0) { futureState = {s:1, i:0, n:count, o:value} ; }
-                    state = -1 ;
-                    break ;
-
-                case 103: // naturals array reading initialization
-                    count = a[i++] ;
-                    value = new MSNaturalArray() ;
-                    //console.log("Registering new Natural Array as "+this.objects.length+"nth object") ;
-                    this.objects.push(value) ;
-                    hasValue = true ;
-                    if (count > 0) {
-                        futureState = {s:-1, i:0, n:count, o:value} ;
-                        state = 104 ;
-                    }
-                    else { state = -1 ; }
-                    break ;
-
-                case 104: // contents of natural array reading
-                    currentState.o.push(a[i++]) ;
-                    currentState.i++ ;
-                    if (currentState.i === currentState.n) {
-                        stack.pop() ;
-                        //console.log('      <<<< did pop stack 104') ;
-                        currentState = stack.length ? stack[stack.length - 1] : null ;
-                        state = -1 ;
-                    }
-                    break ;
-
-                case 105: // couple reading initialization
-                    value = new MSCouple() ;
-                    //console.log("Registering new Couple as "+this.objects.length+"nth object") ;
-                    this.objects.push(value) ;
-                    hasValue = true ;
-                    futureState = {s:2, i:0, n:2, o:value} ;
-                    state = -1 ;
-                    break ;
-
-                case 106: // simple string or decimal reading
-                    value = a[i++] ;
-                    hasValue = true ;
-                    //console.log("Registering new object '"+value+"' as "+this.objects.length+"nth object") ;
-                    this.objects.push(value) ;
-                    state = -1 ;
-                    break ;
-
-                case 107: // data reading
-                    value = MSData.dataWithBase64String(a[i++]) ;
-                    hasValue = true ;
-                    //console.log("Registering new data '"+value+"' as "+this.objects.length+"nth object") ;
-                    this.objects.push(value) ;
-                    state = -1 ;
-                    break ;
-
-                case 108: // true date reading
-                    value = new MSDate(a[i++] - MSDate.SecsFrom19700101To20010101) ; // conversion from EPOCH to 01012001 reference point
-                    hasValue = true ;
-                    //console.log("Registering new date '"+value+"' as "+this.objects.length+"nth object") ;
-                    this.objects.push(value) ;
-                    state = -1 ;
-                    break ;
-
-                case 109: // color reading
-                    value = new MSColor(a[i++]) ;
-                    hasValue = true ;
-                    // console.log("Registering new coloe '"+value+"' as "+this.objects.length+"nth object") ;
-                    this.objects.push(value) ;
-                    state = -1 ;
-                    break ;
-
-                case 110: // simple numbers (they are not referenced in objects)
-                    value = a[i++] ;
-                    hasValue = true ;
-                    state = -1 ;
-                    break ;
-
-                case 111: // TIMESTAMP READING
-                    value = 1000 * a[i++] ; // the initial value can be a double
-
-                    if (value >= Date.DISTANT_FUTURE_TS) { value = Date.DISTANT_FUTURE_TS ; }
-                    else if ( value <= Date.DISTANT_PAST_TS) { value = Date.DISTANT_PAST_TS ; }
-
-                    value = Date.dateWithUTCTime(value) ;
-                    //console.log("Registering new timestamp '"+value+"' as "+this.objects.length+"nth object") ;
-                    this.objects.push(value) ;
-                    hasValue = true ;
-                    state = -1 ;
-                    break ;
-
-                default:
-                    //console.log("Bad state encoutered during parsing") ;
-                    throw 'Bad state encoutered during parsing' ;
-            }
-            if (hasValue) {
-
-                switch(currentState.s) {
-                    case 0:
-                        ////console.log('     dict[\''+currentState.k+'\'] = '+MSTools.stringify(value)) ;
-                        //console.log('     dict[\''+currentState.k+'\'] = ' + dst(value));
-                        currentState.o[currentState.k] = value ;
-                        currentState.nextState = 101 ;
-                        break ;
-                    case 1:
-                        ////console.log('     array['+currentState.i+'] = '+MSTools.stringify(value)) ;
-                        //console.log('     array['+currentState.i+'] = ' + dst(value)) ;
-                        currentState.o[currentState.i] = value ;
-                        break ;
-                    case 2:
-                        ////console.log('     couple.firstMember = '+MSTools.stringify(value)) ;
-                        //console.log('     couple.firstMember = ' + dst(value)) ;
-                        currentState.o.firstMember = value ;
-                        currentState.s = 3 ;
-                        break ;
-                    case 3:
-                        ////console.log('     couple.secondMember = '+MSTools.stringify(value)) ;
-                        //console.log('     couple.secondMember = ' + dst(value)) ;
-                        currentState.o.secondMember = value ;
-                        break ;
-                    default:
-                        throw "Bad currentState : "+currentState.s ;
-                }
-                currentState.i++ ;
-                if (currentState.i === currentState.n) {
-                    stack.pop() ;
-                    currentState = stack.length ? stack[stack.length - 1] : null ;
-                    /*console.log('      <<<< did pop stack EOL') ;
-                    if (currentState) {
-                        console.log('      new current state.s = '+currentState.s+', i = '+currentState.i+', n = '+currentState.n+', => '+currentState.nextState) ;
-                    }
-                    else {
-                        console.log('      : stack is empty') ;
-                    }*/
-                }
-            }
-            if (futureState) {
-                stack.push(futureState) ;
-                //console.log('      >>>> did push stack') ;
-                currentState = futureState ;
-                //console.log('      new current state.s = '+currentState.s+', i = '+currentState.i+', n = '+currentState.n+', => '+currentState.nextState) ;
-            }
-        }
-        //console.log('---- MSTE automat final state : '+state+' stack depth : '+stack.length+'--------------------------') ;
-        if (state !== -1)    { throw "Bad final state "+state ; }
-        if (stack.length > 0) { throw "Bad final stack with current stack state "+stack.lastObject().s ; }
-    }
-}, true) ;
-
-// ================ coder class interface ====================
-MSTools.MSTE.Encoder = function() {
-    this.referenceKey = MSTools.localUniqueID() ;
-    this.tokens = ["MSTE0102", 0, "CRC00000000"] ;
-    this.stream = [] ;
-    this.encodedObjects = [] ;
-    this.keyNames = [] ;
-    this.keysIndexes = {} ;
-    this.classesNames = [] ;
-    this.classesIndexes = {} ;
-    this.stringsIndexes = {} ;
-    this.numbersIndexes = {} ;
-    this.isa = 'MSTECoder' ;
-} ;
-
-// ================  coder instance methods =============
-MSTools.defineInstanceMethods(MSTools.MSTE.Encoder,
-{
-    shouldPushObject:function(o) {
-        var identifier = o[this.referenceKey] ;
-
-        if ($ok(identifier)) { this.stream.push(9) ; this.stream.push(identifier) ; return false ;}
-
-        identifier = this.encodedObjects.length ;
-
-        Object.defineProperty(o, this.referenceKey, {
-            enumerable:false,
-            configurable:true, // so it could be later deleted
-            writable:false,
-            value:identifier
-        }) ;
-        this.encodedObjects[identifier] = o ;
-
-        return true ;
-    },
-    push:function(anItem) { this.stream.push(anItem) ; },
-    pushKey:function(aKey) {
-        var index = this.keysIndexes[aKey] ;
-        if (!$ok(index)) {
-            index = this.keyNames.length ;
-            this.keyNames[index] = aKey ;
-            this.keysIndexes[aKey] = index ;
-        }
-        this.stream.push(index) ;
-    },
-    pushClass:function(aClass) {
-        var index = this.classesIndexes[aClass] ;
-        if (!$ok(index)) {
-            index = this.classesNames.length ;
-            this.classesNames[index] = aClass ;
-            this.classesIndexes[aClass] = index ;
-        }
-        this.stream.push(50 + index) ;
-    },
-    pushNumber: function(aNumber) {
-        var key = aNumber.toString(32) ; // yeah, less chars with 32 digits
-        var index = this.numbersIndexes[key] ;
-        if ($ok(index)) {
-            this.stream.push(9) ;
-            this.stream.push(index) ;
-        }
-        else {
-            index = this.encodedObjects.length ;
-            this.numbersIndexes[key] = index ;
-            this.encodedObjects[index] = null ; // we don't want to remove a non existant property at the end
-            this.stream.push(20) ;
-            this.stream.push(aNumber) ;
-        }
-    },
-    pushString: function(aString) {
-        var key = aString.length < 64 ? aString : ("0000000" + (aString.hashCode() >>> 0).toString(16)).substr(-8) ;
-        var index, array = this.stringsIndexes[key] ;
-        if ($ok(array)) {
-            var count = array.length, i ;
-            for (i = 0 ; i < count ; i++) {
-                if (aString === array[i].string) { break ; }
-            }
-            if (i < count) {
-                this.stream.push(9) ;
-                this.stream.push(array[i].index) ;
-            }
-            else {
-                index = this.encodedObjects.length ;
-                array.push({string:aString, index:index}) ;
-                this.encodedObjects[index] = null ; // we don't want to remove a non existant property at the end
-                this.stream.push(21) ;
-                this.stream.push(aString) ;
-            }
-        }
-        else {
-            index = this.encodedObjects.length ;
-            this.stringsIndexes[key] = [{string:aString, index:index}] ;
-            this.encodedObjects[index] = null ; // we don't want to remove a non existant property at the end
-            this.stream.push(21) ;
-            this.stream.push(aString) ;
-        }
-    },
-    encodeObject:function(o) {
-        if ($ok(o)) {
-            if (typeof o.toMSTE === 'function') {
-                //console.log('encodeObject:'+o.isa) ;
-                //console.log('--> has MSTE function') ;
-                o.toMSTE(this) ;
-            }
-            else if (this.shouldPushObject(o)) {
-                var i, count, keys = null, idx, k, v, t, total = 0, customClass = null ;
-
-                //console.log('--> pushed on stack') ;
-                if (typeof o.toMSTEClass === 'function') {
-                    customClass = o.toMSTEClass() ;
-                    if (typeof customClass === "string" && customClass.length) {
-                        this.pushClass(customClass) ;
-                    }
-                    else { customClass = null ; }
-                }
-                else { this.stream.push(30) ; } // a standard dictionary
-
-                if ((typeof o.msteKeys) === 'function') {
-                    keys = o.msteKeys() ;
-                }
-
-                idx = this.stream.length ;
-                this.stream[idx] = 0 ;
-
-                if ((count = $length(keys)) !== 0) {
-                    // specific mste loop
-                    for (i = 0 ; i < count ; i++) {
-                        k = keys[i] ; v = o[k] ; t = typeof v ;
-                        if (v === null) {
-                            total ++ ;
-                            this.pushKey(k) ;
-                            this.stream.push(0) ;
-                        }
-                        else if (t !== 'function' && t !== 'undefined') {
-                            total ++ ;
-                            this.pushKey(k) ;
-                            this.encodeObject(v) ;
-                        }
-                    }
-                }
-                else {
-                    // object standard loop
-                    // //console.log('will encode object '+MSTools.stringify(o)) ;
-                    for (k in o) {
-                        if (k.length && k.charAt(0) >= 'A') {
-                            v = o[k] ; t = typeof v ;
-                            if (v === null) {
-                                total ++ ;
-                                this.pushKey(k) ;
-                                this.stream.push(0) ;
-                            }
-                            else if (t !== 'function' && t !== 'undefined') {
-                                total ++ ;
-                                this.pushKey(k) ;
-                                this.encodeObject(v) ;
-                            }
-                        }
-                    }
-                }
-                this.stream[idx] = total ;
-            }
-        }
-        else { this.stream.push(0) ; }
-    },
-    finalizeTokens:function() {
-        var i, ret = this.tokens, a = this.classesNames, count = a.length ;
-
-        ret.push(count) ;
-        for (i = 0 ; i < count ; i++)  { ret.push(a[i]) ; }
-
-        a = this.keyNames ; count = a.length ;
-        ret.push(count) ;
-        for (i = 0 ; i < count ; i++)  { ret.push(a[i]) ; }
-
-        a = this.stream ; count = a.length ;
-        for (i = 0 ; i < count ; i++)  { ret.push(a[i]) ; }
-
-        this.deleteTemporaryIdentifiers() ;
-        ret[1] = ret.length ;
-
-        return ret ;
-    },
-    deleteTemporaryIdentifiers:function() {
-        var i, a = this.encodedObjects, count = a.length, elem, k = this.referenceKey ;
-        for (i = 0 ; i < count ; i++) {
-            elem = a[i] ;
-            if (elem !== null) { delete elem[k] ; }
-        }
-        this.stringsIndexes = {} ;
-        this.numbersIndexes = {} ;
-    },
-    encodeException:function(o) { throw "Impossible to encode object of class "+this.className() ; },
-    toMSTE:function(encoder) { encoder.encodeException(this) ; }
-}, true) ;
-
-
-// ================  MSTE methods =============
-MSTools.MSTE.parse = function(source, options) {
-    var r = null ;
-    if ($length(source)) {
-        var decoder = new MSTools.MSTE.Decoder(options) ;
-        try {
-            r = decoder.parse(source) ;
-        }
-        catch (e) {
-        //console.log("error "+e+" during MSTE parsing") ; r = null ;
-        }
-    }
-    return r ;
-} ;
-
-MSTools.MSTE.tokenize = function(rootObject) {
-    var encoder = new MSTools.MSTE.Encoder(), r = null ;
-    try {
-        encoder.encodeObject(rootObject) ;
-        r = encoder.finalizeTokens() ;
-    }
-    catch (e) {
-        encoder.deleteTemporaryIdentifiers() ;
-        console.log("error \""+e+"\" encountered during MSTE tokenizing") ;
-        r = null ;
-    }
-
-    return r ;
-} ;
-
-MSTools.MSTE.stringify = function(rootObject) {
-    var r = this.tokenize(rootObject) ;
-    if (r) {
-        try {
-            r = MSTools.stringify(r) ; // a lightly modified version of crockford stringify implementation
-            // TODO: calculate the CRC after the stringify has been done or maybe remove the CRC once for all...
-        }
-        catch (e) {
-            console.log("error "+e+" during MSTE stringify") ;
-            r = null ;
-        }
-    }
-    return r ;
-} ;
-
-if (typeof module !== 'undefined' && module.exports) {  // On Node.js
-    GLOBAL.MSTools = MSTools;
-    GLOBAL.$ok = $ok;
-    GLOBAL.$length = $length;
-    GLOBAL.$div = $div;
-    GLOBAL.$equals = $equals;
-    GLOBAL.MSColor = MSColor;
-    GLOBAL.MSDate = MSDate;
-    GLOBAL.MSArray = MSArray;
-    GLOBAL.MSData = MSData;
-    GLOBAL.MSNaturalArray = MSNaturalArray;
-    GLOBAL.MSCouple = MSCouple;
-}
+})();

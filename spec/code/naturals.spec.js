@@ -1,13 +1,12 @@
 if (typeof module !== 'undefined' && module.exports) {  // On Node.js
-    require("../../tmp/MSTools");
+  var MSNaturalArray = require("../../tmp/MSTools").MSNaturalArray;
 }
 
 describe("==========Tests of natural arrays ========", function() {
-
 	beforeEach(function() {
 	    jasmine.addCustomEqualityTester($equals);
 	}) ;
-	
+
 	it("Testing Array subclass behavior slice, concat and splice", function() {
 		var n = new MSNaturalArray(1, 2, 3) ;
 		var n2 = new MSNaturalArray([2, 7, 8]) ;
@@ -33,7 +32,7 @@ describe("==========Tests of natural arrays ========", function() {
 		expect(n3).toEqual(new MSNaturalArray(1,2,3,4,5,6,7,8)) ;
 		n3.unshift(101, '0', undefined, null) ;
 		expect(n3).toEqual(new MSNaturalArray(101,0,0,0,1,2,3,4,5,6,7,8)) ;
-		
+
 		n3.splice(0,4) ;
 		n3.splice(8,0,9) ;
 		expect(n3).toEqual(new MSNaturalArray(1,2,3,4,5,6,7,8,9)) ;
@@ -46,7 +45,7 @@ describe("==========Tests of natural arrays ========", function() {
 	}) ;
 
 	it("Testing constructor", function() {
-				
+
 		var n = new MSNaturalArray() ;
         expect(n.length).toBe(0);
 
@@ -57,7 +56,7 @@ describe("==========Tests of natural arrays ========", function() {
 		n = new MSNaturalArray(1, 8, 3, 7) ;
         expect(n.length).toBe(4);
         expect(MSTools.stringify(n)).toBe("[1,8,3,7]");
-    });				
+    });
 
 
 	it("Testing pushing transformable values", function() {
@@ -68,7 +67,7 @@ describe("==========Tests of natural arrays ========", function() {
 		n.push('-36.55') ;
 		n.push('a') ;
         expect(MSTools.stringify(n)).toBe("[12,1236,4294967295,4294967260,0]");
-    });				
+    });
 
 	it("Testing constructors with several values", function() {
 		var n = new MSNaturalArray(21, 356, 17, 65.5) ;

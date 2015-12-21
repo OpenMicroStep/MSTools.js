@@ -1,10 +1,9 @@
-
 if (typeof module !== 'undefined' && module.exports) {  // On Node.js
-    require("../../tmp/MSTools");
+  require("../../tmp/MSTools");
 }
 
 describe("==========Tests de l'objet MSColor ========", function() {
-	
+
 	it("Test du constructeur", function() {
 		expect((new MSColor(255)).toString()).toBe('#0000ff') ;
 		expect((new MSColor(0xa0a1a2)).toString()).toBe('#a0a1a2') ;
