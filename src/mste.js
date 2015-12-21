@@ -595,16 +595,11 @@ MSTools.defineInstanceMethods(MSTools.MSTE.Encoder,
 // ================  MSTE methods =============
 MSTools.MSTE.parse = function(source, options) {
     var r = null ;
-    if ($length(source)) {
-        var decoder = new MSTools.MSTE.Decoder(options) ;
-        try {
-            r = decoder.parse(source) ;
-        }
-        catch (e) {
-        //console.log("error "+e+" during MSTE parsing") ; r = null ;
-        }
+    if (!$length(source)) {
+        throw "MSTE source string is empty";
     }
-    return r ;
+    var decoder = new MSTools.MSTE.Decoder(options) ;
+    return decoder.parse(source) ;
 } ;
 
 MSTools.MSTE.tokenize = function(rootObject) {
@@ -613,26 +608,12 @@ MSTools.MSTE.tokenize = function(rootObject) {
         encoder.encodeObject(rootObject) ;
         r = encoder.finalizeTokens() ;
     }
-    catch (e) {
+    finally {
         encoder.deleteTemporaryIdentifiers() ;
-        console.log("error \""+e+"\" encountered during MSTE tokenizing") ;
-        r = null ;
     }
-
     return r ;
 } ;
 
 MSTools.MSTE.stringify = function(rootObject) {
-    var r = this.tokenize(rootObject) ;
-    if (r) {
-        try {
-            r = MSTools.stringify(r) ; // a lightly modified version of crockford stringify implementation
-            // TODO: calculate the CRC after the stringify has been done or maybe remove the CRC once for all...
-        }
-        catch (e) {
-            console.log("error "+e+" during MSTE stringify") ;
-            r = null ;
-        }
-    }
-    return r ;
+    return MSTools.stringify(this.tokenize(rootObject));
 } ;
