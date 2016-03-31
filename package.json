@@ -1,7 +1,7 @@
 {
   "name": "MSTools",
   "private": true,
-  "version": "0.0.3",
+  "version": "0.0.4",
   "main": "dist/MSTools.js",
   "devDependencies": {
     "grunt": "~0.4.4",

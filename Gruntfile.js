@@ -150,7 +150,7 @@ module.exports = function(grunt) {
     });
 
     grunt.registerTask('prebuild', ['replace', 'lint', 'preprocess:dist', 'concat', 'jshint']);
-    grunt.registerTask('postbuild', ['clean:tmp', 'notify:success']);
+    grunt.registerTask('postbuild', ['clean:tmp']);
 
     grunt.registerTask('default', 'An alias task for build.', ['build']);
     grunt.registerTask('lint', 'Lints our sources', ['lintspaces']);

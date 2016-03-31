@@ -1,4 +1,4 @@
-/*! MSTools - v0.0.3 - 2015-12-21 */
+/*! MSTools - v0.0.4 - 2016-03-31 */
 
 // we only add some functions into the main scope
 
@@ -200,7 +200,7 @@
                 throw "unsigned integer conversion impossible (not a number or number infinite)" ;
             }
         },
-        toJSON: function (key) { return this ; }
+        toJSON: function (key) { return this.valueOf() ; }
     }) ;
     
     MSTools.defineInstanceMethods(Number, {
@@ -4105,6 +4105,10 @@
                                 hasValue = true ;
                                 state = -1 ;
                             }
+    
+                            // Should fix bug where regular Dictionaries were treated as Custom Vars
+                            FutureConstructor = null ;
+    
                         }
                         break ;
     
