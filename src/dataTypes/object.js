@@ -2,12 +2,28 @@
 // should we define object isa ?
 
 // ================= class methods ===============
-MSTools.defineMethods(Object,{
-    /* jshint proto:true */
-    setPrototypeOf: function(obj, proto) { obj.__proto__ = proto ; },
-    getPrototypeOf: function(obj) { return obj.__proto__ ; }
-    /* jshint proto:false */
-}) ;
+/* jshint proto:true */
+if (!Object.setPrototypeOf) {
+    if ("".__proto__) { // Not IE < 11
+        MSTools.defineMethods(Object,{
+            setPrototypeOf: function(obj, proto) { obj.__proto__ = proto ; },
+        }) ;
+    }
+    else if (console.warn) {
+        console.warn("No available polyfill for Object.getPrototypeOf (IE < 11 ?)");
+    }
+}
+if (!Object.getPrototypeOf) {
+    if ("".__proto__) { // Not IE < 11
+        MSTools.defineMethods(Object,{
+            getPrototypeOf: function(obj) { return obj.__proto__ ; }
+        }) ;
+    }
+    else if (console.warn) {
+        console.warn("No available polyfill for Object.getPrototypeOf (IE < 9 ?)");
+    }
+}
+/* jshint proto:false */
 
 // ================  instance methods =============
 

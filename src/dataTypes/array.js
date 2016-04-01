@@ -47,8 +47,8 @@ MSTools.defineInstanceMethods(Array, {
         while (i-- > 0 ) { if (this[i] === item) { return i ; }}
         return -1;
     },
-    contains:function(item) { return this.indexOf(item) === -1 ? false : true ; },
-    containsIdentical:function(item) { return this.indexOfIdentical(item) === -1 ? false : true ; },
+    contains:function(item) { return this.indexOf(item) !== -1 ; },
+    containsIdentical:function(item) { return this.indexOfIdentical(item) !== -1 ; },
     isEqualTo: function(other, options) {
         var i, count ;
         if (this === other) { return true ; }

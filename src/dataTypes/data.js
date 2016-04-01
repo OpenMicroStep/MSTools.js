@@ -4,25 +4,22 @@
 // with this constructor a new MSData(10) creates a data with the byte '10' at first position
 // any array passed as an argument will be concatenated
 function MSData() {
-    var a, ret = new MSArray(), i, count = arguments.length ;
-    var localConstructor = this.constructor ;
-
-    Object.setPrototypeOf(ret, localConstructor.prototype) ;
+    MSArray.call(this);
+    var a, i, count = arguments.length ;
 
     // console.log('wanted to create a data new with '+count+' arguments :') ;
     if (count === 1 && (typeof (a = arguments[0])) === 'string') {
         count = a.length ;
-        for (i = 0 ; i < count ; i++) { ret.push(a.charCodeAt(i) & 0xff) ; }
+        for (i = 0 ; i < count ; i++) { this.push(a.charCodeAt(i) & 0xff) ; }
     }
     else {
         for (i = 0 ; i < count ; i++) {
             a = arguments[i] ;
             //console.log('arguments['+i+']=<'+a+'> ('+(typeof a)+')') ;
-            if ($ok(a) && a.isArray) { localConstructor.prototype.push.apply(ret, a) ; }
-            else { ret.push(a) ; }
+            if ($ok(a) && a.isArray) { this.push.apply(this, a) ; }
+            else { this.push(a) ; }
         }
     }
-    return ret ;
 }
 
 MSData.prototype = Object.create(MSArray.prototype, { constructor: {value: MSData} });

@@ -8,17 +8,12 @@
 
 
 function MSArray() {
-    var a, ret = [], i, count = arguments.length ;
-    var localConstructor = this.constructor ;
-
-    Object.setPrototypeOf(ret, localConstructor.prototype) ;
-
+    var a, i, count = arguments.length ;
     for (i = 0 ; i < count ; i++) {
         a = arguments[i] ;
-        if ($ok(a) && a.isArray) { localConstructor.prototype.push.apply(ret, a) ; }
-        else { ret.push(a) ; }
+        if ($ok(a) && a.isArray) { Array.prototype.push.apply(this, a) ; }
+        else { this.push(a) ; }
     }
-    return ret ;
 }
 
 MSArray.prototype = Object.create(Array.prototype, { constructor: {value: MSArray} });
@@ -28,40 +23,57 @@ MSArray.prototype = Object.create(Array.prototype, { constructor: {value: MSArra
 // ================= class methods ===============
 
 // ================  instance methods =============
+
 MSTools.defineInstanceMethods(MSArray, {
     unshift: function() {
         var count = arguments.length ;
         if (count) {
-            var F = this.constructor, i, n = new F() ;
-            for (i = 0 ; i < count ; i++) { n.push(arguments[i]) ; }
-            return Array.prototype.unshift.apply(this, n) ; // unshift
+            var tmp = new this.constructor();
+            tmp.push.apply(tmp, arguments);
+            return Array.prototype.unshift.apply(this, tmp);
         }
         return this.length ;
     },
     concat: function() {
-        var F = this.constructor ;
-        var ret = new F(this), i, count = arguments.length, p = F.prototype.push ;
-        for (i = 0 ; i < count ; i++) { p.apply(ret, arguments[i]) ; }
-        return ret ;
-    },
-    slice: function(start,end) {
-        // console.log("want to slice "+MSTools.stringify(this)+" from "+start+" to "+end) ;
-        var ret = Array.prototype.slice.call(this, start, end) ;
-        Object.setPrototypeOf(ret, Object.getPrototypeOf(this)) ;
-        return ret ;
-    },
-    splice: function(index, n) {
-        var a = [index, n], o, i, count = arguments.length, ret, p = this.constructor.prototype.push ;
-        if (count > 2) {
-            for (i = 2 ; i < count ; i++) { p.call(a, arguments[i]) ; }
+        var ret = new this.constructor();
+        var a, i, count = arguments.length ;
+        ret.push.apply(ret, this) ;
+        for (i = 0 ; i < count ; i++) {
+            a = arguments[i] ;
+            if ($ok(a) && a.isArray) { ret.push.apply(ret, a) ; }
+            else { ret.push(a) ; }
         }
-        ret =  Array.prototype.splice.apply(this, a) ;
-        Object.setPrototypeOf(ret, Object.getPrototypeOf(this)) ;
+        return ret ;
+    },
+    slice: function(start, end) {
+        var ret = new this.constructor();
+        var count = this.length;
+        if (start === void 0) { start = 0; }
+        else if (start < 0) { start = count - start; }
+        if (end === void 0) { end = count; }
+        else if (end < 0) { end = count - end; }
+        while (start < end) {
+            ret.push(this[start++]);
+        }
+        return ret ;
+    },
+    splice: function(start, deleteCount) {
+        var ret = new this.constructor();
+        var args = [start, deleteCount];
+        var count = arguments.length;
+        if (count > 2) {
+            var tmp = new this.constructor();
+            for (var i = 2; i < count; i++) {
+                tmp.push(arguments[i]);
+                args.push(tmp[i - 2]);
+            }
+        }
+        ret.push.apply(ret, Array.prototype.splice.apply(this, args));
         return ret ;
     },
     filter: function() {
-        var ret =  Array.prototype.filter.apply(this, arguments) ;
-        Object.setPrototypeOf(ret, Object.getPrototypeOf(this)) ;
+        var ret = new this.constructor();
+        ret.push.apply(ret, Array.prototype.filter.call(this, arguments));
         return ret ;
     }
 }, true) ;

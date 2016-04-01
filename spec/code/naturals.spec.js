@@ -17,14 +17,12 @@ describe("==========Tests of natural arrays ========", function() {
 		expect(n.length).toBe(4) ;
 		n.length = 2 ;
 		expect(n.length).toBe(2) ;
-		n[10] = 10 ;
-		expect(n.length).toBe(11) ;
-		n.length = 2 ;
 		n.push(7) ;
 		n.push(8) ;
 		expect(n.isArray).toBe(true) ;
 		expect(n instanceof Array).toBe(true) ;
 		n3 = n.slice(1,4) ;
+        expect(n3 instanceof MSNaturalArray).toBe(true) ;
 		expect(n3).toEqual(n2) ;
 		n3 = (new MSNaturalArray(1,2,3,4,5,6)).concat(n3) ;
 		expect(n3).toEqual(new MSNaturalArray(1,2,3,4,5,6,2,7,8)) ;
@@ -41,7 +39,7 @@ describe("==========Tests of natural arrays ========", function() {
 	    expect(n3.isa).toBe('Naturals') ;
 		expect(n3 instanceof Array).toBe(true) ;
 		expect(n3 instanceof MSNaturalArray).toBe(true) ;
-		expect(Array.isArray(n3)).toBe(true) ;
+		//expect(Array.isArray(n3)).toBe(true) ;
 	}) ;
 
 	it("Testing constructor", function() {

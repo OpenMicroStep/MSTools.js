@@ -44,7 +44,6 @@ describe("==========Tests of data  ========", function() {
 		expect(r.toArray()).toEqual([95,96,97,98,80,90,100,110,112,113,114,115]) ;
 		expect(n4.toArray()).toEqual([65,77,32,78,66,67,80,91,92,93,94]) ;
 
-		expect(Array.isArray(n4)).toBe(true) ;
 		n4.pop() ;
 		n4.pop() ;
 		n4.pop() ;
