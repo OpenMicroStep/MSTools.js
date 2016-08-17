@@ -1,22 +1,28 @@
 {
-  "name": "MSTools",
+  "name": "mstools",
   "private": true,
-  "version": "0.0.4",
-  "main": "dist/MSTools.js",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "concurrently 'tsc' 'npm run build:umd:compress'",
+    "build:umd": "browserify src/index.ts -p [ tsify ] -s MSTools -o dist/mstools.umd.js",
+    "build:umd:debug": "browserify src/index.ts -p [ tsify ] -s MSTools -o dist/mstools.umd.js -d",
+    "build:umd:compress": "npm run build:umd && uglifyjs dist/mstools.umd.js --mangle --compress --stats -o dist/mstools.umd.min.js",
+    "test:umd": "browserify tests/index.ts -p [ tsify -p tests ] -o dist/mstools-tests.umd.js",
+    "test:node": "mocha --colors tests/load.umd.js dist/mstools-tests.umd.js",
+    "test": "npm run build && npm run test:umd && concurrently 'npm run test:node'"
+  },
   "devDependencies": {
-    "grunt": "~0.4.4",
-    "grunt-bump": "0.7.0",
-    "grunt-cli": "~0.1.13",
-    "grunt-contrib-clean": "~0.7.0",
-    "grunt-contrib-concat": "~0.5.1",
-    "grunt-contrib-jasmine": "^1.0.0",
-    "grunt-contrib-jshint": "~0.11.3",
-    "grunt-contrib-uglify": "^1.0.1",
-    "grunt-jasmine-nodejs": "^1.5.2",
-    "grunt-lintspaces": "~0.7.1",
-    "grunt-preprocess": "~5.0.1",
-    "grunt-replace": "~0.11.0",
-    "load-grunt-tasks": "~3.4.0",
-    "time-grunt": "~1.2.2"
+    "@types/chai": "^3.4.30",
+    "@types/expect": "^1.13.29",
+    "@types/mocha": "^2.2.29",
+    "browserify": "^13.1.0",
+    "chai": "^3.5.0",
+    "concurrently": "^2.2.0",
+    "mocha": "^3.0.2",
+    "tsify": "^1.0.3",
+    "typescript": "^2.0.0",
+    "uglify": "^0.1.5"
   }
 }

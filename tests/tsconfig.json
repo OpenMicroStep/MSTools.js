@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "lib": [ "es6" ],
+        "target": "es5",
+        "types": ["mocha", "expect"],
+        "outDir": "../dist/tests",
+        "module": "commonjs",
+        "noImplicitThis": true,
+        "strictNullChecks": true
+    },
+    "files": [
+        "index.ts"
+    ]
+}
