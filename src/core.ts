@@ -62,7 +62,7 @@ const meta = {
     '\"' : '\\"',
     '\\' : '\\\\',
     //
-    '\/' : '\\/',
+    '\/' : '\\/'
 };
 export function stringify(value: any): string {
     return JSON.stringify(value).replace(escapable, function toUTF8(s) {
