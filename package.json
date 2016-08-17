@@ -11,7 +11,8 @@
     "build:umd:compress": "npm run build:umd && uglifyjs dist/mstools.umd.js --mangle --compress --stats -o dist/mstools.umd.min.js",
     "test:umd": "browserify tests/index.ts -p [ tsify -p tests ] -o dist/mstools-tests.umd.js",
     "test:node": "mocha --colors tests/load.umd.js dist/mstools-tests.umd.js",
-    "test": "npm run build && npm run test:umd && concurrently 'npm run test:node'"
+    "test:node-min": "mocha --colors tests/load.umd.min.js dist/mstools-tests.umd.js",
+    "test": "npm run build && npm run test:umd && concurrently 'npm run test:node' 'npm run test:node-min'"
   },
   "devDependencies": {
     "@types/chai": "^3.4.30",

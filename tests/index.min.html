@@ -1,0 +1,20 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Mocha Tests</title>
+  <link href="https://cdn.rawgit.com/mochajs/mocha/2.2.5/mocha.css" rel="stylesheet" />
+</head>
+<body>
+  <div id="mocha"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/core-js/2.4.1/shim.min.js"></script>
+  <script src="https://cdn.rawgit.com/mochajs/mocha/2.2.5/mocha.js"></script>
+  <script src="../dist/mstools.umd.min.js"></script>
+  <script>mocha.setup('bdd')</script>
+  <script src="../dist/mstools-tests.umd.js"></script>
+  <script>
+    mocha.checkLeaks();
+    mocha.globals(['MSTools']);
+    mocha.run();
+  </script>
+</body>
+</html>
