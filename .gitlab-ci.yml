@@ -1,0 +1,6 @@
+image: node:latest
+
+node:latest:
+  script:
+   - npm install
+   - npm test
