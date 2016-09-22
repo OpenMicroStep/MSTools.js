@@ -1,3 +1,4 @@
+import { EncoderOptions } from './mste/encoder';
 export { MSColor } from './types/mscolor';
 export { MSBuffer } from './types/msbuffer';
 export { MSDate } from './types/msdate';
@@ -11,8 +12,5 @@ export declare const MSTE: {
         } | null | undefined;
         crc?: boolean | undefined;
     } | undefined) => any;
-    stringify: (root: any, options?: {
-        version?: number | undefined;
-        crc?: boolean | undefined;
-    } | undefined) => string;
+    stringify: (root: any, options?: EncoderOptions | undefined) => string;
 };

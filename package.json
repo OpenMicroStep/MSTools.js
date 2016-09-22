@@ -25,5 +25,8 @@
     "tsify": "^1.0.3",
     "typescript": "^2.0.0",
     "uglify": "^0.1.5"
+  },
+  "dependencies": {
+    "typescript": "^2.0.2"
   }
 }

@@ -23,7 +23,7 @@ export declare class Decoder {
     engine: Engine;
     constructor({classes, crc}?: DecoderOptions);
     parse(parse_src: string | (string | number)[]): any;
-    nextToken(): number | string;
+    nextToken(): string | number;
     pushRef<T>(v: T): T;
     parseItem(): any;
 }

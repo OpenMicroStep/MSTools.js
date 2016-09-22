@@ -55,7 +55,7 @@ export class Decoder {
               throw new Error("crc verification failed") ;
         }
 
-        let classCount = this.nextToken();
+        let classCount = <number>this.nextToken();
         if (typeof classCount !== 'number')
             throw new Error("the 4th token must be the number of classes") ;
         classCount += this.index;
@@ -68,7 +68,7 @@ export class Decoder {
             this.classes.push(className);
         }
 
-        let keyCount = this.nextToken();
+        let keyCount = <number>this.nextToken()!;
         if (typeof keyCount !== 'number')
             throw new Error("the key count token must be a number") ;
         keyCount += this.index;

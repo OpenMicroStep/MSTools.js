@@ -1,5 +1,5 @@
-import {parse} from './mste/decoder'
-import {stringify} from './mste/encoder'
+import {parse, DecoderOptions} from './mste/decoder'
+import {stringify, EncoderOptions} from './mste/encoder'
 export {MSColor} from './types/mscolor'
 export {MSBuffer} from './types/msbuffer'
 export {MSDate} from './types/msdate'
