@@ -22,7 +22,7 @@
     "chai": "^3.5.0",
     "concurrently": "^2.2.0",
     "mocha": "^3.0.2",
-    "tsify": "^1.0.3",
+    "tsify": "1.0.3",
     "typescript": "^2.0.0",
     "uglify": "^0.1.5"
   },
