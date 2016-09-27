@@ -396,6 +396,8 @@ if (Buffer.TYPED_ARRAY_SUPPORT) {
 function assertSize (size) {
   if (typeof size !== 'number') {
     throw new TypeError('"size" argument must be a number')
+  } else if (size < 0) {
+    throw new RangeError('"size" argument must not be negative')
   }
 }
 
@@ -472,7 +474,7 @@ function fromString (that, string, encoding) {
 }
 
 function fromArrayLike (that, array) {
-  var length = checked(array.length) | 0
+  var length = array.length < 0 ? 0 : checked(array.length) | 0
   that = createBuffer(that, length)
   for (var i = 0; i < length; i += 1) {
     that[i] = array[i] & 255
@@ -541,7 +543,7 @@ function fromObject (that, obj) {
 }
 
 function checked (length) {
-  // Note: cannot use `length < kMaxLength` here because that fails when
+  // Note: cannot use `length < kMaxLength()` here because that fails when
   // length is NaN (which is otherwise coerced to zero.)
   if (length >= kMaxLength()) {
     throw new RangeError('Attempt to allocate Buffer larger than maximum ' +
@@ -8139,35 +8141,765 @@ Library.prototype.test = function(obj, type) {
 
 },{}],41:[function(require,module,exports){
 "use strict";
+var msbuffer_1 = require('./types/msbuffer');
+function ok(value) {
+    return value !== null && value !== undefined;
+}
+exports.ok = ok;
+function type(value) {
+    var type = typeof value;
+    return (type === 'object' && value && typeof value.constructor === 'function' && value.constructor != Object && value.constructor.name) || type;
+}
+exports.type = type;
+function isInteger(a) { return a <= 9007199254740991 && a >= -9007199254740991 && Math.floor(a) === a; }
+exports.isInteger = isInteger;
+function div(a, b) { return a / b | 0; }
+exports.div = div;
+function pad(value, size, padder) {
+    var diff = size - value.length;
+    var p = "";
+    while (diff > 0) {
+        p += (diff > padder.length ? padder : padder.slice(0, diff));
+        diff -= padder.length;
+    }
+    return p;
+}
+function padStart(value, size, padder) {
+    if (padder === void 0) { padder = ' '; }
+    return pad(value, size, padder) + value;
+}
+exports.padStart = padStart;
+function padEnd(value, size, padder) {
+    if (padder === void 0) { padder = ' '; }
+    return value + pad(value, size, padder);
+}
+exports.padEnd = padEnd;
+var crcTable = (function prepareCRCTable() {
+    var c, n, k, ret = [];
+    for (n = 0; n < 256; n++) {
+        c = n;
+        for (k = 0; k < 8; k++) {
+            c = ((c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1));
+        }
+        ret[n] = c;
+    }
+    return ret;
+})();
+function crc32(bytes, toByte) {
+    if (typeof bytes === 'string')
+        bytes = msbuffer_1.MSBuffer.bufferFromString(bytes);
+    toByte = toByte || function byteAtIndex(value) { return value; };
+    var crc = 0 ^ -1;
+    var i, length = bytes.length;
+    for (i = 0; i < length; i++) {
+        crc = ((crc >> 8) & 0x00ffffff) ^ crcTable[(crc ^ toByte(bytes[i])) & 0xff];
+    }
+    return (crc ^ -1) >>> 0;
+    ;
+}
+exports.crc32 = crc32;
+var escapable = /[/\x00-\x1f\u007f-\uffff]/g;
+var meta = {
+    // Handled by ECMA Spec
+    '\b': '\\b',
+    '\t': '\\t',
+    '\n': '\\n',
+    '\f': '\\f',
+    '\r': '\\r',
+    '\"': '\\"',
+    '\\': '\\\\',
+    //
+    '\/': '\/'
+};
+function stringify(value) {
+    return JSON.stringify(value).replace(escapable, function toUTF8(s) {
+        return meta[s] || "\\u" + padStart(s.charCodeAt(0).toString(16).toUpperCase(), 4, "0000");
+    });
+}
+exports.stringify = stringify;
+
+},{"./types/msbuffer":53}],42:[function(require,module,exports){
+"use strict";
+var decoder_1 = require('./mste/decoder');
+var encoder_1 = require('./mste/encoder');
+var mscolor_1 = require('./types/mscolor');
+exports.MSColor = mscolor_1.MSColor;
+var msbuffer_1 = require('./types/msbuffer');
+exports.MSBuffer = msbuffer_1.MSBuffer;
+var msdate_1 = require('./types/msdate');
+exports.MSDate = msdate_1.MSDate;
+var msnaturalarray_1 = require('./types/msnaturalarray');
+exports.MSNaturalArray = msnaturalarray_1.MSNaturalArray;
+var mscouple_1 = require('./types/mscouple');
+exports.MSCouple = mscouple_1.MSCouple;
+var core_1 = require('./core');
+exports.crc32 = core_1.crc32;
+exports.div = core_1.div;
+exports.isInteger = core_1.isInteger;
+exports.ok = core_1.ok;
+exports.type = core_1.type;
+exports.padStart = core_1.padStart;
+exports.padEnd = core_1.padEnd;
+exports.stringify = core_1.stringify;
+exports.MSTE = {
+    parse: decoder_1.parse,
+    stringify: encoder_1.stringify
+};
+
+},{"./core":41,"./mste/decoder":43,"./mste/encoder":44,"./types/msbuffer":53,"./types/mscolor":54,"./types/mscouple":55,"./types/msdate":56,"./types/msnaturalarray":57}],43:[function(require,module,exports){
+"use strict";
+var engines_1 = require('./engines');
+var Decoder = (function () {
+    function Decoder(_a) {
+        var _b = _a === void 0 ? {} : _a, _c = _b.classes, classes = _c === void 0 ? null : _c, _d = _b.crc, crc = _d === void 0 ? true : _d;
+        this.correspondances = classes || {};
+        this.checkCRC = !!crc;
+    }
+    Decoder.prototype.parse = function (parse_src) {
+        this.keys = [];
+        this.classes = [];
+        this.objects = [];
+        this.refs = [];
+        this.index = 0;
+        var source = (typeof parse_src === 'string' ? JSON.parse(parse_src) : parse_src);
+        if (!source || typeof source.length !== "number" || source.length < 4)
+            throw new Error("two few tokens");
+        this.tokens = source;
+        var n = source.length;
+        var version = this.nextToken();
+        if (typeof version !== 'string' || !/^MSTE[0-9]{4}$/.test(version))
+            throw new Error("the first token must be the version string");
+        var engine = engines_1.ENGINES.find(function (e) { return e.version === version; });
+        if (!engine)
+            throw new Error("no valid engine for version: " + version);
+        this.engine = engine;
+        var count = this.nextToken();
+        if (typeof count !== 'number')
+            throw new Error("the second token must be the number of token");
+        if (count !== n)
+            throw new Error("bad control count");
+        var crc = this.nextToken();
+        if (typeof crc !== 'string' || !/^CRC[0-9A-F]{8}$/.test(crc))
+            throw new Error("the third token must be the crc string");
+        if (this.checkCRC && typeof parse_src === "string" && crc !== 'CRC00000000') {
+            if (engines_1.crc32inMSTEformat(parse_src.replace(crc, 'CRC00000000')) !== crc)
+                throw new Error("crc verification failed");
+        }
+        var classCount = this.nextToken();
+        if (typeof classCount !== 'number')
+            throw new Error("the 4th token must be the number of classes");
+        classCount += this.index;
+        if (1 + classCount > n)
+            throw new Error("not enough tokens to store classes and the root object");
+        while (this.index < classCount) {
+            var className = this.nextToken();
+            if (typeof className !== 'string')
+                throw new Error("class name must be a string");
+            this.classes.push(className);
+        }
+        var keyCount = this.nextToken();
+        if (typeof keyCount !== 'number')
+            throw new Error("the key count token must be a number");
+        keyCount += this.index;
+        if (1 + keyCount > n)
+            throw new Error("not enough tokens to store keys and the root object");
+        while (this.index < keyCount) {
+            var keyName = this.nextToken();
+            if (typeof keyName !== 'string')
+                throw new Error("key name must be a string");
+            this.keys.push(keyName);
+        }
+        return this.parseItem();
+    };
+    Decoder.prototype.nextToken = function () {
+        if (this.index < this.tokens.length)
+            return this.tokens[this.index++];
+        throw new Error("not enough tokens");
+    };
+    Decoder.prototype.pushRef = function (v) {
+        this.refs.push(v);
+        return v;
+    };
+    Decoder.prototype.parseItem = function () {
+        var token = this.nextToken();
+        if (typeof token !== 'number')
+            throw new Error("code token must be a number");
+        //echo "parseItem " . $token . "(" . $this->engine->typeForToken($token) .")" .PHP_EOL;
+        if (token >= 50) {
+            var clsidx = this.engine.classIndex(token);
+            if (clsidx >= this.classes.length)
+                throw new Error("");
+            var clsname = this.classes[clsidx];
+            var cls = this.correspondances[clsname];
+            var obj = this.pushRef(cls ? new cls() : {});
+            this.engine.parse_dictionary_into(this, obj);
+            return obj;
+        }
+        var parser = this.engine.parsers[token];
+        if (!parser) {
+            throw new Error("unknown code token '" + token + "'");
+        }
+        return parser(this);
+    };
+    return Decoder;
+}());
+exports.Decoder = Decoder;
+function parse(source, options) {
+    var decoder = new Decoder(options);
+    try {
+        return decoder.parse(source);
+    }
+    catch (err) {
+        var msg = err.message;
+        err.message = 'unable to parse MSTE';
+        if (decoder.index > 0) {
+            err.message += ', at token ' + (decoder.index - 1) + ': ' + msg;
+            err.message += "\n" + JSON.stringify(decoder.tokens.slice(Math.max(0, decoder.index - 5), Math.min(decoder.tokens.length, decoder.index + 5)));
+        }
+        throw err;
+    }
+}
+exports.parse = parse;
+
+},{"./engines":45}],44:[function(require,module,exports){
+"use strict";
+var engines_1 = require('./engines');
+var core_1 = require('../core');
+var mscolor_1 = require('../types/mscolor');
+var msbuffer_1 = require('../types/msbuffer');
+var mscouple_1 = require('../types/mscouple');
+var msdate_1 = require('../types/msdate');
+var msnaturalarray_1 = require('../types/msnaturalarray');
+function extendNativeObject(object, name, value) {
+    Object.defineProperty(object, name, {
+        enumerable: false,
+        configurable: true,
+        writable: true,
+        value: value
+    });
+}
+extendNativeObject(Object.prototype, 'toMSTE', function toMSTE(options) {
+    return stringify(this, options);
+});
+extendNativeObject(Object.prototype, "encodeToMSTE", function encodeObjectToMSTE(encoder) {
+    encoder.encodeDictionary(this);
+});
+extendNativeObject(Array.prototype, "encodeToMSTE", function encodeArrayToMSTE(encoder) {
+    encoder.encodeArray(this);
+});
+extendNativeObject(Date.prototype, "encodeToMSTE", function encodeGMTDateToMSTE(encoder) {
+    encoder.encodeGMTDate(this);
+});
+extendNativeObject(msdate_1.MSDate.prototype, "encodeToMSTE", function encodeLocalDateToMSTE(encoder) {
+    encoder.encodeLocalDate(this);
+});
+extendNativeObject(msbuffer_1.MSBuffer.prototype, "encodeToMSTE", function encodeBufferToMSTE(encoder) {
+    encoder.encodeBuffer(this);
+});
+extendNativeObject(mscolor_1.MSColor.prototype, "encodeToMSTE", function encodeColorToMSTE(encoder) {
+    encoder.encodeColor(this);
+});
+extendNativeObject(msnaturalarray_1.MSNaturalArray.prototype, "encodeToMSTE", function encodeNaturalsToMSTE(encoder) {
+    encoder.encodeNaturals(this);
+});
+extendNativeObject(mscouple_1.MSCouple.prototype, "encodeToMSTE", function encodeCoupleToMSTE(encoder) {
+    encoder.encodeCouple(this);
+});
+function encodeTypedArrayToMSTE(encoder) {
+    encoder.encodeBuffer(this);
+}
+[Int8Array, Uint8Array, Int16Array, Uint16Array, Int32Array, Uint32Array].map(function (typedarray) {
+    extendNativeObject(typedarray.prototype, "encodeToMSTE", encodeTypedArrayToMSTE);
+});
+function tokenize(root, options) {
+    var version = options && options.version || 0x0102;
+    var engine = engines_1.ENGINES.find(function (e) { return e.versionCode === version; });
+    if (!engine)
+        throw new Error("no valid engine with version: " + version);
+    return engine.tokenize(root, options);
+}
+exports.tokenize = tokenize;
+function stringify(root, options) {
+    var tokens = tokenize(root, options);
+    tokens[2] = engines_1.crc32inMSTEformat(core_1.stringify(tokens));
+    return core_1.stringify(tokens);
+}
+exports.stringify = stringify;
+
+},{"../core":41,"../types/msbuffer":53,"../types/mscolor":54,"../types/mscouple":55,"../types/msdate":56,"../types/msnaturalarray":57,"./engines":45}],45:[function(require,module,exports){
+"use strict";
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+var msbuffer_1 = require('../types/msbuffer');
+var mscolor_1 = require('../types/mscolor');
+var msnaturalarray_1 = require('../types/msnaturalarray');
+var msdate_1 = require('../types/msdate');
+var mscouple_1 = require('../types/mscouple');
+var core_1 = require('../core');
+var DISTANT_PAST = -8640000000000000;
+var DISTANT_FUTURE = 8640000000000000;
+function parse_nil(decoder) {
+    return null;
+}
+function parse_true(decoder) {
+    return true;
+}
+function parse_false(decoder) {
+    return false;
+}
+function parse_emptyString(decoder) {
+    return '';
+}
+function parse_emptyData(decoder) {
+    return new msbuffer_1.MSBuffer();
+}
+function parse_distantPast() {
+    return new Date(DISTANT_PAST);
+}
+function parse_distantFuture() {
+    return new Date(DISTANT_FUTURE);
+}
+function parse_ref(decoder) {
+    var idx = decoder.nextToken();
+    var count = decoder.refs.length;
+    if (idx < count)
+        return decoder.refs[idx];
+    throw new Error("referenced object index is too big (" + idx + " < " + count + ")");
+}
+function parse_numeric(decoder) {
+    var ret = decoder.nextToken();
+    if (typeof ret === 'number')
+        return ret;
+    throw new Error("a number was expected");
+}
+function parse_integer(decoder) {
+    var ret = parse_numeric(decoder);
+    if (!core_1.isInteger(ret))
+        throw new Error("an integer was expected");
+    return ret;
+}
+function parse_numeric_ref(decoder) {
+    return decoder.pushRef(parse_numeric(decoder));
+}
+function parse_integer_ref(decoder) {
+    return decoder.pushRef(parse_integer(decoder));
+}
+function parse_integer_mkclamp(min, max) {
+    return function parse_integer(decoder) {
+        return Math.max(min, Math.min(max, parse_numeric(decoder)));
+    };
+}
+var parse_i1 = parse_integer_mkclamp(-128, 127);
+var parse_u1 = parse_integer_mkclamp(0, 255);
+var parse_i2 = parse_integer_mkclamp(-32768, 32767);
+var parse_u2 = parse_integer_mkclamp(0, 65535);
+var parse_i4 = parse_integer_mkclamp(-2147483648, 2147483647);
+var parse_u4 = parse_integer_mkclamp(0, 4294967295);
+var parse_i8 = parse_integer_mkclamp(-9223372036854776000, 9223372036854776000);
+var parse_u8 = parse_integer_mkclamp(0, 18446744073709552000);
+function parse_decimal_ref(decoder) {
+    return decoder.pushRef(parse_numeric(decoder));
+}
+function parse_localDate_ref(decoder) { return decoder.pushRef(new msdate_1.MSDate(parse_numeric(decoder) - msdate_1.MSDate.SecsFrom19700101To20010101)); }
+function parse_gmtDate_ref(decoder) { return decoder.pushRef(new Date(parse_numeric(decoder) * 1000)); }
+function parse_color_ref(decoder) { return decoder.pushRef(new mscolor_1.MSColor(parse_numeric(decoder))); }
+function parse_string(decoder) {
+    var ret = decoder.nextToken();
+    if (typeof ret === "string")
+        return ret;
+    throw new Error("a string was expected");
+}
+function parse_string_ref(decoder) {
+    return decoder.pushRef(parse_string(decoder));
+}
+function parse_data_ref(decoder) {
+    return decoder.pushRef(msbuffer_1.MSBuffer.bufferWithBase64String(parse_string(decoder)));
+}
+function parse_naturals_ref(decoder) {
+    var count = parse_numeric(decoder);
+    var ret = decoder.pushRef(new msnaturalarray_1.MSNaturalArray());
+    while (count > 0) {
+        ret.push(parse_numeric(decoder));
+        count--;
+    }
+    return ret;
+}
+function parse_dictionary_into(decoder, into) {
+    var count = parse_numeric(decoder);
+    while (count > 0) {
+        var key = decoder.keys[parse_numeric(decoder)];
+        var obj = decoder.parseItem();
+        into[key] = obj;
+        count--;
+    }
+}
+function parse_dictionary_ref(decoder) {
+    var ret = decoder.pushRef({});
+    parse_dictionary_into(decoder, ret);
+    return ret;
+}
+function parse_array_ref(decoder) {
+    var count = parse_numeric(decoder);
+    var ret = decoder.pushRef([]);
+    while (count > 0) {
+        ret.push(decoder.parseItem());
+        count--;
+    }
+    return ret;
+}
+function parse_couple_ref(decoder) {
+    var ret = decoder.pushRef(new mscouple_1.MSCouple());
+    ret.firstMember = decoder.parseItem();
+    ret.secondMember = decoder.parseItem();
+    return ret;
+}
+function keyIndex(keys, key) {
+    var ref = keys.get(key);
+    if (ref === undefined)
+        keys.set(key, ref = keys.size);
+    return ref;
+}
+function keys(keys, arr) {
+    var c = keys.size;
+    arr.push(c);
+    var offset = arr.length;
+    arr.length += c;
+    keys.forEach(function (value, index) {
+        arr[offset + value] = index;
+    });
+}
+var EncoderV10X = (function () {
+    function EncoderV10X(options) {
+        this.tokens = [this.engine.version, 0, "CRC00000000", 0, 0];
+        this.references = new Map();
+        this.keys = new Map();
+        this.classes = new Map();
+    }
+    EncoderV10X.prototype.encodeRoot = function (object) {
+        this.encodeObject(object);
+        this.finalize();
+    };
+    EncoderV10X.prototype.finalize = function () {
+        var classesAndKeys = [];
+        keys(this.classes, classesAndKeys);
+        keys(this.keys, classesAndKeys);
+        if (classesAndKeys.length > 2)
+            (_a = this.tokens).splice.apply(_a, [3, 2].concat(classesAndKeys));
+        this.tokens[1] = this.tokens.length;
+        var _a;
+    };
+    EncoderV10X.prototype.encodeObject = function (object) {
+        switch (typeof object) {
+            case 'object':
+                if (object === null)
+                    this.encodeNil();
+                else
+                    object.encodeToMSTE(this);
+                break;
+            case 'number':
+                core_1.isInteger(object) ? this.encodeInteger(object) : this.encodeReal(object);
+                break;
+            case 'string':
+                this.encodeString(object);
+                break;
+            case 'boolean':
+                this.encodeBoolean(object);
+                break;
+            default: throw new Error('unsupported typeof object');
+        }
+    };
+    EncoderV10X.prototype.encodeNil = function () { this.pushToken(0); };
+    EncoderV10X.prototype.encodeBoolean = function (value) { this.pushToken(value ? 1 : 2); };
+    EncoderV10X.prototype.encodeRef = function (ref) {
+        this.pushToken(9);
+        this.pushToken(ref);
+    };
+    EncoderV10X.prototype.encodeKey = function (key) {
+        this.pushToken(this.keyIndex(key));
+    };
+    EncoderV10X.prototype.keyIndex = function (key) {
+        return keyIndex(this.keys, key);
+    };
+    EncoderV10X.prototype.classIndex = function (className) {
+        return keyIndex(this.classes, className);
+    };
+    EncoderV10X.prototype.encodeStringV10X = function (value, emptyToken, token) {
+        if (!this.shouldPushObject(value))
+            return;
+        if (value.length === 0)
+            this.pushToken(emptyToken);
+        else {
+            this.pushToken(token);
+            this.pushToken(value);
+        }
+    };
+    EncoderV10X.prototype.encodeArrayV10X = function (value, token) {
+        if (!this.shouldPushObject(value))
+            return;
+        this.pushToken(token);
+        var i, len = value.length;
+        this.pushToken(len);
+        for (i = 0; i < len; i++)
+            this.encodeObject(value[i]);
+    };
+    EncoderV10X.prototype.encodeNaturalsV10X = function (value, token) {
+        if (!this.shouldPushObject(value))
+            return;
+        this.pushToken(token);
+        var i, len = value.length;
+        this.pushToken(len);
+        for (i = 0; i < len; i++)
+            this.pushToken(value[i]);
+    };
+    EncoderV10X.prototype.encodeDictionaryV10X = function (value, token) {
+        if (!this.shouldPushObject(value))
+            return;
+        this.pushToken(token);
+        var keys = Object.keys(value);
+        this.pushToken(keys.length);
+        for (var _i = 0, keys_1 = keys; _i < keys_1.length; _i++) {
+            var k = keys_1[_i];
+            this.encodeKey(k);
+            this.encodeObject(value[k]);
+        }
+    };
+    EncoderV10X.prototype.encodeColorV10X = function (value, token) {
+        if (!this.shouldPushObject(value))
+            return;
+        this.pushToken(token);
+        this.pushToken(value.toNumber());
+    };
+    EncoderV10X.prototype.encodeBufferV10X = function (value, token) {
+        if (!this.shouldPushObject(value))
+            return;
+        this.pushToken(token);
+        if (!(value instanceof msbuffer_1.MSBuffer))
+            value = new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+        this.pushToken(msbuffer_1.MSBuffer.encodeToBase64(value));
+    };
+    EncoderV10X.prototype.encodeGMTDateV10X = function (value, token) {
+        if (!this.shouldPushObject(value))
+            return;
+        this.pushToken(token);
+        this.pushToken(value.getTime() / 1000);
+    };
+    EncoderV10X.prototype.encodeLocalDateV10X = function (value, token) {
+        if (!this.shouldPushObject(value))
+            return;
+        this.pushToken(token);
+        this.pushToken(value.secondsSinceLocal1970());
+    };
+    EncoderV10X.prototype.encodeCoupleV10X = function (value, token) {
+        if (!this.shouldPushObject(value))
+            return;
+        this.pushToken(token);
+        this.encodeObject(value.firstMember);
+        this.encodeObject(value.secondMember);
+    };
+    EncoderV10X.prototype.pushToken = function (token) {
+        this.tokens.push(token);
+    };
+    EncoderV10X.prototype.shouldPushObject = function (object) {
+        var ref = this.references.get(object);
+        if (ref !== undefined) {
+            this.encodeRef(ref);
+            return false;
+        }
+        this.references.set(object, this.references.size);
+        return true;
+    };
+    return EncoderV10X;
+}());
+var EncoderV0101 = (function (_super) {
+    __extends(EncoderV0101, _super);
+    function EncoderV0101() {
+        _super.apply(this, arguments);
+    }
+    EncoderV0101.prototype.encodeInteger = function (value) {
+        if (!this.shouldPushObject(value))
+            return;
+        this.pushToken(3);
+        this.pushToken(value);
+    };
+    EncoderV0101.prototype.encodeReal = function (value) {
+        if (!this.shouldPushObject(value))
+            return;
+        this.pushToken(4);
+        this.pushToken(value);
+    };
+    EncoderV0101.prototype.encodeString = function (value) { this.encodeStringV10X(value, 26, 5); };
+    EncoderV0101.prototype.encodeArray = function (value) { this.encodeArrayV10X(value, 20); };
+    EncoderV0101.prototype.encodeNaturals = function (value) { this.encodeNaturalsV10X(value, 21); };
+    EncoderV0101.prototype.encodeDictionary = function (value, cls) {
+        this.encodeDictionaryV10X(value, cls ? 50 + this.classIndex(cls) * 2 : 8);
+    };
+    EncoderV0101.prototype.encodeColor = function (value) { this.encodeColorV10X(value, 7); };
+    EncoderV0101.prototype.encodeBuffer = function (value) { this.encodeBufferV10X(value, 23); };
+    EncoderV0101.prototype.encodeGMTDate = function (value) {
+        var time = value.getTime();
+        if (time <= DISTANT_PAST)
+            this.pushToken(24);
+        else if (time >= DISTANT_FUTURE)
+            this.pushToken(25);
+        else
+            this.encodeGMTDateV10X(value, 6);
+    };
+    EncoderV0101.prototype.encodeLocalDate = function (value) { this.encodeGMTDate(value.toDate()); };
+    EncoderV0101.prototype.encodeCouple = function (value) { this.encodeCoupleV10X(value, 22); };
+    return EncoderV0101;
+}(EncoderV10X));
+EncoderV0101.prototype.engine = {
+    version: "MSTE0101",
+    versionCode: 0x0101,
+    parse_dictionary_into: parse_dictionary_into,
+    parsers: {
+        0: parse_nil,
+        1: parse_true,
+        2: parse_false,
+        3: parse_integer_ref,
+        4: parse_numeric_ref,
+        5: parse_string_ref,
+        6: parse_gmtDate_ref,
+        7: parse_color_ref,
+        8: parse_dictionary_ref,
+        9: parse_ref,
+        10: parse_i1,
+        11: parse_u1,
+        12: parse_i2,
+        13: parse_u2,
+        14: parse_i4,
+        15: parse_u4,
+        16: parse_i8,
+        17: parse_u8,
+        18: parse_numeric,
+        19: parse_numeric,
+        20: parse_array_ref,
+        21: parse_naturals_ref,
+        22: parse_couple_ref,
+        23: parse_data_ref,
+        24: parse_distantPast,
+        25: parse_distantFuture,
+        26: parse_emptyString,
+        27: parse_ref
+    },
+    tokenize: function tokenizeV0101(object, options) {
+        var encoder = new EncoderV0101(options);
+        encoder.encodeRoot(object);
+        return encoder.tokens;
+    },
+    classIndex: function (code) { return ((code % 2 === 0 ? code - 50 : code - 51) / 2) | 0; }
+};
+var EncoderV0102 = (function (_super) {
+    __extends(EncoderV0102, _super);
+    function EncoderV0102() {
+        _super.apply(this, arguments);
+    }
+    EncoderV0102.prototype.encodeInteger = function (value) {
+        if (!this.shouldPushObject(value))
+            return;
+        this.pushToken(20);
+        this.pushToken(value);
+    };
+    EncoderV0102.prototype.encodeReal = function (value) {
+        if (!this.shouldPushObject(value))
+            return;
+        this.pushToken(20);
+        this.pushToken(value);
+    };
+    EncoderV0102.prototype.encodeString = function (value) { this.encodeStringV10X(value, 3, 21); };
+    EncoderV0102.prototype.encodeArray = function (value) { this.encodeArrayV10X(value, 31); };
+    EncoderV0102.prototype.encodeNaturals = function (value) { this.encodeNaturalsV10X(value, 26); };
+    EncoderV0102.prototype.encodeDictionary = function (value, cls) {
+        this.encodeDictionaryV10X(value, cls ? 50 + this.classIndex(cls) : 30);
+    };
+    EncoderV0102.prototype.encodeColor = function (value) { this.encodeColorV10X(value, 24); };
+    EncoderV0102.prototype.encodeBuffer = function (value) {
+        value.length > 0 ? this.encodeBufferV10X(value, 25) : this.pushToken(4);
+    };
+    EncoderV0102.prototype.encodeGMTDate = function (value) { this.encodeGMTDateV10X(value, 23); };
+    EncoderV0102.prototype.encodeLocalDate = function (value) { this.encodeLocalDateV10X(value, 22); };
+    EncoderV0102.prototype.encodeCouple = function (value) { this.encodeCoupleV10X(value, 32); };
+    return EncoderV0102;
+}(EncoderV10X));
+EncoderV0102.prototype.engine = {
+    version: "MSTE0102",
+    versionCode: 0x0102,
+    parse_dictionary_into: parse_dictionary_into,
+    parsers: {
+        0: parse_nil,
+        1: parse_true,
+        2: parse_false,
+        3: parse_emptyString,
+        4: parse_emptyData,
+        9: parse_ref,
+        10: parse_i1,
+        11: parse_u1,
+        12: parse_i2,
+        13: parse_u2,
+        14: parse_i4,
+        15: parse_u4,
+        16: parse_i8,
+        17: parse_u8,
+        18: parse_numeric,
+        19: parse_numeric,
+        20: parse_decimal_ref,
+        21: parse_string_ref,
+        22: parse_localDate_ref,
+        23: parse_gmtDate_ref,
+        24: parse_color_ref,
+        25: parse_data_ref,
+        26: parse_naturals_ref,
+        30: parse_dictionary_ref,
+        31: parse_array_ref,
+        32: parse_couple_ref
+    },
+    tokenize: function tokenizeV0102(object, options) {
+        var encoder = new EncoderV0102(options);
+        encoder.encodeRoot(object);
+        return encoder.tokens;
+    },
+    classIndex: function (code) { return code - 50; }
+};
+exports.ENGINES = [EncoderV0102.prototype.engine, EncoderV0101.prototype.engine];
+function crc32inMSTEformat(mstestring) {
+    return "CRC" + core_1.padStart(core_1.crc32(mstestring).toString(16), 8, '0').toUpperCase();
+}
+exports.crc32inMSTEformat = crc32inMSTEformat;
+
+},{"../core":41,"../types/msbuffer":53,"../types/mscolor":54,"../types/mscouple":55,"../types/msdate":56,"../types/msnaturalarray":57}],46:[function(require,module,exports){
+"use strict";
 var chai_1 = require('chai');
-var mstools_1 = require('./mstools');
+var _1 = require('../');
 describe("MSBuffer", function () {
     it("constructor, concat, slice, splice", function () {
-        var n = new mstools_1.MSBuffer();
+        var n = new _1.MSBuffer();
         chai_1.expect(n.length).to.eq(0);
-        n = new mstools_1.MSBuffer(100, 80, 30, 77);
+        n = new _1.MSBuffer(100, 80, 30, 77);
         chai_1.expect(n.length).to.eq(4);
         chai_1.expect(Array.from(n)).to.deep.equal([100, 80, 30, 77]);
         chai_1.expect(n[2]).to.eq(30);
-        var n1 = new mstools_1.MSBuffer('AM NBCP');
+        var n1 = new _1.MSBuffer('AM NBCP');
         chai_1.expect(n1.length).to.eq(7);
         chai_1.expect(Array.from(n1)).to.deep.equal([65, 77, 32, 78, 66, 67, 80]);
         chai_1.expect(n1[5]).to.eq(67);
-        var n2 = new mstools_1.MSBuffer(80, 90, 100, 110, 112, 113, 114, 115);
+        var n2 = new _1.MSBuffer(80, 90, 100, 110, 112, 113, 114, 115);
         var r = n1.concat(n, n2);
-        chai_1.expect(r).to.be.instanceof(mstools_1.MSBuffer);
+        chai_1.expect(r).to.be.instanceof(_1.MSBuffer);
         chai_1.expect(Array.from(r)).to.deep.equal([65, 77, 32, 78, 66, 67, 80, 100, 80, 30, 77, 80, 90, 100, 110, 112, 113, 114, 115]);
-        chai_1.expect(r.slice()).to.be.instanceof(mstools_1.MSBuffer);
+        chai_1.expect(r.slice()).to.be.instanceof(_1.MSBuffer);
         chai_1.expect(r.slice().isEqualTo(r)).to.eq(true);
         chai_1.expect(r.slice(void 0, 7).isEqualTo(n1)).to.eq(true);
         chai_1.expect(r.slice(7, 11).isEqualTo(n)).to.eq(true);
         chai_1.expect(r.slice(11).isEqualTo(n2)).to.eq(true);
         var n3 = r.splice(7, 4, 91, 92, 93, 94, 95, 96, 97, 98);
-        chai_1.expect(n3).to.be.instanceof(mstools_1.MSBuffer);
+        chai_1.expect(n3).to.be.instanceof(_1.MSBuffer);
         chai_1.expect(n3.isEqualTo(n)).to.eq(true);
         chai_1.expect(Array.from(r)).to.deep.equal([65, 77, 32, 78, 66, 67, 80, 91, 92, 93, 94, 95, 96, 97, 98, 80, 90, 100, 110, 112, 113, 114, 115]);
         var n4 = r.splice(0, 11);
-        chai_1.expect(n4).to.be.instanceof(mstools_1.MSBuffer);
+        chai_1.expect(n4).to.be.instanceof(_1.MSBuffer);
         chai_1.expect(Array.from(r)).to.deep.equal([95, 96, 97, 98, 80, 90, 100, 110, 112, 113, 114, 115]);
         chai_1.expect(Array.from(n4)).to.deep.equal([65, 77, 32, 78, 66, 67, 80, 91, 92, 93, 94]);
         n4.pop();
@@ -8178,24 +8910,24 @@ describe("MSBuffer", function () {
         chai_1.expect(Array.from(n4)).to.deep.equal([91, 80, 67, 66, 78, 32, 77, 65]);
     });
     it('JSON.stringify', function () {
-        chai_1.expect(JSON.stringify(new mstools_1.MSBuffer(100, 80, 30, 77))).to.deep.equal("[100,80,30,77]");
+        chai_1.expect(JSON.stringify(new _1.MSBuffer(100, 80, 30, 77))).to.deep.equal("[100,80,30,77]");
     });
     /*it("Testing splice", function() {
     }) ;*/
     it("base64 decode/encode on short string", function () {
         var s = "Rjd5NA==";
-        var d = mstools_1.MSBuffer.bufferWithBase64String(s);
+        var d = _1.MSBuffer.bufferWithBase64String(s);
         chai_1.expect(d.toString()).to.eq("F7y4");
         chai_1.expect(d.toBase64String()).to.eq(s);
     });
     it("base64 encoding", function () {
-        var d = new mstools_1.MSBuffer("Client browser handles the data from the source form as a string data encoded by document charset (iso-8859-1 in the case of this document) and sends the data as a binary http stream to a web server. You can choose another character set for the conversion of the source text data (the textarea). This script does Base64 conversion with the converted binary data");
+        var d = new _1.MSBuffer("Client browser handles the data from the source form as a string data encoded by document charset (iso-8859-1 in the case of this document) and sends the data as a binary http stream to a web server. You can choose another character set for the conversion of the source text data (the textarea). This script does Base64 conversion with the converted binary data");
         var s = d.toBase64String();
         chai_1.expect(d.toBase64String()).to.eq("Q2xpZW50IGJyb3dzZXIgaGFuZGxlcyB0aGUgZGF0YSBmcm9tIHRoZSBzb3VyY2UgZm9ybSBhcyBhIHN0cmluZyBkYXRhIGVuY29kZWQgYnkgZG9jdW1lbnQgY2hhcnNldCAoaXNvLTg4NTktMSBpbiB0aGUgY2FzZSBvZiB0aGlzIGRvY3VtZW50KSBhbmQgc2VuZHMgdGhlIGRhdGEgYXMgYSBiaW5hcnkgaHR0cCBzdHJlYW0gdG8gYSB3ZWIgc2VydmVyLiBZb3UgY2FuIGNob29zZSBhbm90aGVyIGNoYXJhY3RlciBzZXQgZm9yIHRoZSBjb252ZXJzaW9uIG9mIHRoZSBzb3VyY2UgdGV4dCBkYXRhICh0aGUgdGV4dGFyZWEpLiBUaGlzIHNjcmlwdCBkb2VzIEJhc2U2NCBjb252ZXJzaW9uIHdpdGggdGhlIGNvbnZlcnRlZCBiaW5hcnkgZGF0YQ==");
     });
     it("base64 decoding (1)", function () {
         var s = "VGhlIEJ5dGVBcnJheSBjbGFzcyB3YXMgcHJpbWFyaWx5IGRlc2lnbmVkIHRvIHdvcmsgd2l0aCBBU1AgYW5kIFZCU2NyaXB0LCBidXQgeW91IGNhbiB1c2UgaXQgd2l0aCBhbnkgb3RoZXIgbGFuZ3VhZ2Ugd29ya2luZyB3aXRoIENPTSAoQWN0aXZlWCwgT0xFKSBvYmplY3RzLCBzdWNoIGlzIFZCQSAoVkJBNSwgVkJBNiwgV29yZCwgRXhjZWwsIE1TIEFjY2VzcyksIFZCU2NyaXB0IGFuZCBKU2NyaXB0IGluIHdpbmRvd3Mgc2NyaXB0aW5nIGhvc3QgKC53c2gsIC5jaG0gb3IgLmh0YSBhcHBsaWNhdGlvbnMsIE91dGxvb2sgb3IgZWNoYW5nZSBzZXJ2ZXItc2lkZSBzY3JpcHRzKSwgVkIuTmV0LCBDIyBvciBqIyBpbiBBU1AuTmV0IGFuZCBvdGhlcnMu";
-        var d = mstools_1.MSBuffer.bufferWithBase64String(s);
+        var d = _1.MSBuffer.bufferWithBase64String(s);
         var r = "The ByteArray class was primarily designed to work with ASP and VBScript, but you can use it with any other language working with COM (ActiveX, OLE) objects, such is VBA (VBA5, VBA6, Word, Excel, MS Access), VBScript and JScript in windows scripting host (.wsh, .chm or .hta applications, Outlook or echange server-side scripts), VB.Net, C# or j# in ASP.Net and others.";
         chai_1.expect(d.toString()).to.eq(r);
     });
@@ -8207,35 +8939,35 @@ describe("MSBuffer", function () {
             "IGluIHdpbmRvd3Mgc2NyaXB0aW5nIGhvc3QgKC53c2gsIC5jaG0gb3IgLmh0YSBhcHBsaWNhdGlv\n" +
             "bnMsIE91dGxvb2sgb3IgZWNoYW5nZSBzZXJ2ZXItc2lkZSBzY3JpcHRzKSwgVkIuTmV0LCBDIyBv\n" +
             "ciBqIyBpbiBBU1AuTmV0IGFuZCBvdGhlcnMu";
-        var d = mstools_1.MSBuffer.bufferWithBase64String(s);
+        var d = _1.MSBuffer.bufferWithBase64String(s);
         var r = "The ByteArray class was primarily designed to work with ASP and VBScript, but you can use it with any other language working with COM (ActiveX, OLE) objects, such is VBA (VBA5, VBA6, Word, Excel, MS Access), VBScript and JScript in windows scripting host (.wsh, .chm or .hta applications, Outlook or echange server-side scripts), VB.Net, C# or j# in ASP.Net and others.";
         chai_1.expect(d.toString()).to.eq(r);
     });
 });
 
-},{"./mstools":47,"chai":4}],42:[function(require,module,exports){
+},{"../":42,"chai":4}],47:[function(require,module,exports){
 "use strict";
 var chai_1 = require('chai');
-var mstools_1 = require('./mstools');
+var _1 = require('../');
 describe("MSColor", function () {
     it("constructor", function () {
-        chai_1.expect((new mstools_1.MSColor(255)).toString()).to.eq('#0000ff');
-        chai_1.expect((new mstools_1.MSColor(0xa0a1a2)).toString()).to.eq('#a0a1a2');
-        chai_1.expect((new mstools_1.MSColor(0xbba0a1a2)).toNumber()).to.eq(0xbba0a1a2);
-        chai_1.expect((new mstools_1.MSColor(0xa0, 0xa1, 0xa2, 0xff - 0xbb)).toNumber().toString(16)).to.eq(0xbba0a1a2 .toString(16));
-        chai_1.expect((new mstools_1.MSColor('ivory')).toString()).to.eq('#fffff0');
-        chai_1.expect(mstools_1.MSColor.YELLOW.toString()).to.eq('#ffff00');
+        chai_1.expect((new _1.MSColor(255)).toString()).to.eq('#0000ff');
+        chai_1.expect((new _1.MSColor(0xa0a1a2)).toString()).to.eq('#a0a1a2');
+        chai_1.expect((new _1.MSColor(0xbba0a1a2)).toNumber()).to.eq(0xbba0a1a2);
+        chai_1.expect((new _1.MSColor(0xa0, 0xa1, 0xa2, 0xff - 0xbb)).toNumber().toString(16)).to.eq(0xbba0a1a2 .toString(16));
+        chai_1.expect((new _1.MSColor('ivory')).toString()).to.eq('#fffff0');
+        chai_1.expect(_1.MSColor.YELLOW.toString()).to.eq('#ffff00');
     });
     it("equality", function () {
-        chai_1.expect(new mstools_1.MSColor('ivory').isEqualTo(new mstools_1.MSColor('#fffff0'))).to.eq(true);
-        chai_1.expect(new mstools_1.MSColor('ivory').isEqualTo(new mstools_1.MSColor('#fffff1'))).to.eq(false);
+        chai_1.expect(new _1.MSColor('ivory').isEqualTo(new _1.MSColor('#fffff0'))).to.eq(true);
+        chai_1.expect(new _1.MSColor('ivory').isEqualTo(new _1.MSColor('#fffff1'))).to.eq(false);
     });
 });
 
-},{"./mstools":47,"chai":4}],43:[function(require,module,exports){
+},{"../":42,"chai":4}],48:[function(require,module,exports){
 "use strict";
 var chai_1 = require('chai');
-var MSTools = require('./mstools');
+var MSTools = require('../');
 describe("Core", function () {
     it("crc32", function () {
         var i, s = 'MSTE0101",3710,"CRC0638641A",1,"XVar",137,"PACT","VARS","_default_","planningSwitch","flags","value","options","objectKey","globals","disabledObjects","index","switch","planningForm","startingHourField","configurationsList","forceDontChoice","statutsList","endingDateField","target","startingDateField","visuPop","intervallePopUp","daysSwitches","selecteds","FORCE_RELOAD_ORIGIN","stepValue","visuIndexRadio","RSRC","path","modificationDate","isFolder","basePath","CARD","ACTIONS","revalidatePreResaINet","gapToNextWeek","duplicateResaWithContract","invalidateGapWithRefund","duplicateResa","revalidateReservation","gotoContract","rejectPreResa","invalidateReservation","newSimpleResaFromResource","gotoResource","editResa","gotoSession","addSimple","gotoActivityFromItem","gotoResourceFromItem","moveGap","deleteResaKeepSubscription","gotoContractor","gotoPlaceFromItem","gapToPreviousDay","invalidateGap","gapToPreviousWeek","acceptPreResa","gotoPlace","addComplex","gapToNextDay","refresh","home","deleteResaWithRefund","revalidateGapKeepSubscription","next","gotoActivity","gotoPeopleFromItem","editResaReadOnly","gotoRegisteredUser","progPrint","print","deleteResaKeepFile","invalidateGapKeepSubscription","editRegistereds","newResaFromResource","gotoPlaceClosures","revalidateGapKeepFile","add","deleteResa","invalidateGapKeepFile","revalidateGap","previous","MID","STAT","CARDTITLE","OPTS","LOCCTRL","CTXCLASS","FRAME_NAME","LOCCTRLPARAM","noEmptyPeriods","outlineStyle","selectedDays","interval","drawsLabels","interfaceName","endingDate","startingDate","objectName","planningColors","gapsBackgroundColor","rulerMinutesFontColor","planningStyles","tcol","bcol","firstHashAngle","firstHashInterspace","hcol","hasFirstHash","firstHashWidth","col","grad","gcol","width","rulerHoursColor","backgroundColor","rulerMinutesColor","rulerHoursFontColor","gradientStyle","hoursSeparationLineColor","outlinesColor","gapsHeaderBackgroundColor","periodBackgroundColor","conflictsColor","periodTitlesColor","titlesColor","borderStyle"';
@@ -8305,48 +9037,48 @@ describe("Core", function () {
     });
 });
 
-},{"./mstools":47,"chai":4}],44:[function(require,module,exports){
+},{"../":42,"chai":4}],49:[function(require,module,exports){
 "use strict";
 var chai_1 = require('chai');
-var mstools_1 = require('./mstools');
+var _1 = require('../');
 describe("MSDate", function () {
     it("interval on 01/01/1970", function () {
-        var d = new mstools_1.MSDate(1970, 1, 1);
-        chai_1.expect(d.interval).to.eq(-mstools_1.MSDate.SecsFrom19700101To20010101);
+        var d = new _1.MSDate(1970, 1, 1);
+        chai_1.expect(d.interval).to.eq(-_1.MSDate.SecsFrom19700101To20010101);
         //expect(d.yearOfCommonEra()).to.eq(1970) ;
         //expect(d.monthOfYear()).to.eq(1) ;
         chai_1.expect(d.dayOfMonth()).to.eq(1);
     });
     it("interval on 01/01/2001", function () {
-        var d = new mstools_1.MSDate(2001, 1, 1);
+        var d = new _1.MSDate(2001, 1, 1);
         chai_1.expect(d.interval).to.eq(0);
         //expect(d.yearOfCommonEra()).to.eq(2001) ;
         //expect(d.monthOfYear()).to.eq(1) ;
         chai_1.expect(d.dayOfMonth()).to.eq(1);
     });
     it("interval on 03/01/2001", function () {
-        var d = new mstools_1.MSDate(2001, 1, 3);
+        var d = new _1.MSDate(2001, 1, 3);
         chai_1.expect(d.interval).to.eq(86400 * 2);
         //expect(d.yearOfCommonEra()).to.eq(2001) ;
         //expect(d.monthOfYear()).to.eq(1) ;
         chai_1.expect(d.dayOfMonth()).to.eq(3);
     });
     it("interval on 01/01/1601", function () {
-        var d = new mstools_1.MSDate(1601, 1, 1);
+        var d = new _1.MSDate(1601, 1, 1);
         chai_1.expect(d.interval).to.eq(-12622780800);
         //expect(d.yearOfCommonEra()).to.eq(1601) ;
         //expect(d.monthOfYear()).to.eq(1) ;
         chai_1.expect(d.dayOfMonth()).to.eq(1);
     });
     it("interval on 17/04/2017", function () {
-        var d = new mstools_1.MSDate(2017, 4, 17);
+        var d = new _1.MSDate(2017, 4, 17);
         chai_1.expect(d.interval).to.eq(514080000);
         //expect(d.yearOfCommonEra()).to.eq(2017) ;
         //expect(d.monthOfYear()).to.eq(4) ;
         chai_1.expect(d.dayOfMonth()).to.eq(17);
     });
     it("interval on 12/05/2122 @ 12h00", function () {
-        var d = new mstools_1.MSDate(2122, 5, 12, 12, 0, 0);
+        var d = new _1.MSDate(2122, 5, 12, 12, 0, 0);
         chai_1.expect(d.interval).to.eq(3829723200);
         //expect(d.yearOfCommonEra()).to.eq(2122) ;
         //expect(d.monthOfYear()).to.eq(5) ;
@@ -8356,57 +9088,57 @@ describe("MSDate", function () {
         chai_1.expect(d.secondOfMinute()).to.eq(0);
     });
     it("valid date on 29/02/0", function () {
-        chai_1.expect(mstools_1.MSDate.validDate(0, 2, 29)).to.eq(false);
+        chai_1.expect(_1.MSDate.validDate(0, 2, 29)).to.eq(false);
     });
     it("valid date on 29/02/04", function () {
-        chai_1.expect(mstools_1.MSDate.validDate(4, 2, 29)).to.eq(false);
+        chai_1.expect(_1.MSDate.validDate(4, 2, 29)).to.eq(false);
     });
     it("valid date on 29/02/8", function () {
-        chai_1.expect(mstools_1.MSDate.validDate(8, 2, 29)).to.eq(true);
+        chai_1.expect(_1.MSDate.validDate(8, 2, 29)).to.eq(true);
     });
     it("valid date on 29/02/1200", function () {
-        chai_1.expect(mstools_1.MSDate.validDate(1200, 2, 29)).to.eq(false);
+        chai_1.expect(_1.MSDate.validDate(1200, 2, 29)).to.eq(false);
     });
     it("valid date on 29/02/1600", function () {
-        chai_1.expect(mstools_1.MSDate.validDate(1600, 2, 29)).to.eq(true);
+        chai_1.expect(_1.MSDate.validDate(1600, 2, 29)).to.eq(true);
     });
     it("valid date on 29/02/1900", function () {
-        chai_1.expect(mstools_1.MSDate.validDate(1900, 2, 29)).to.eq(false);
+        chai_1.expect(_1.MSDate.validDate(1900, 2, 29)).to.eq(false);
     });
     it("valid date on 29/02/2000", function () {
-        chai_1.expect(mstools_1.MSDate.validDate(2000, 2, 29)).to.eq(true);
+        chai_1.expect(_1.MSDate.validDate(2000, 2, 29)).to.eq(true);
     });
     it("valid date on 29/02/2012", function () {
-        chai_1.expect(mstools_1.MSDate.validDate(2012, 2, 29)).to.eq(true);
+        chai_1.expect(_1.MSDate.validDate(2012, 2, 29)).to.eq(true);
     });
     it("valid date on 29/02/2013", function () {
-        chai_1.expect(mstools_1.MSDate.validDate(2013, 2, 29)).to.eq(false);
+        chai_1.expect(_1.MSDate.validDate(2013, 2, 29)).to.eq(false);
     });
     it("valid date on 29/02/2014", function () {
-        chai_1.expect(mstools_1.MSDate.validDate(2014, 2, 29)).to.eq(false);
+        chai_1.expect(_1.MSDate.validDate(2014, 2, 29)).to.eq(false);
     });
     it("valid date on 31/04/2014", function () {
-        chai_1.expect(mstools_1.MSDate.validDate(2014, 0, 31)).to.eq(false);
+        chai_1.expect(_1.MSDate.validDate(2014, 0, 31)).to.eq(false);
     });
     it("dates conversion", function () {
         var d0 = new Date(1966, 3, 13, 12, 59, 1);
-        var d = new mstools_1.MSDate(1966, 4, 13, 12, 59, 1);
+        var d = new _1.MSDate(1966, 4, 13, 12, 59, 1);
         var d1 = d.toDate();
         chai_1.expect(d1).to.deep.equal(d0);
-        var d2 = new mstools_1.MSDate(d1);
+        var d2 = new _1.MSDate(d1);
         chai_1.expect(d.isEqualTo(d2)).to.eq(true);
         var d3 = d2.toDate();
         chai_1.expect(d3).to.deep.equal(d0);
     });
     it("MSDate creation from Date", function () {
-        var ms = new mstools_1.MSDate(new Date(2015, 9, 14));
+        var ms = new _1.MSDate(new Date(2015, 9, 14));
         chai_1.expect(ms.dayOfMonth()).to.eq(14);
         chai_1.expect(ms.monthOfYear()).to.eq(10);
         chai_1.expect(ms.yearOfCommonEra()).to.eq(2015);
     });
 });
 
-},{"./mstools":47,"chai":4}],45:[function(require,module,exports){
+},{"../":42,"chai":4}],50:[function(require,module,exports){
 "use strict";
 var core = require('./core.spec');
 core;
@@ -8421,10 +9153,10 @@ naturals;
 var mste = require('./mste.spec');
 mste;
 
-},{"./buffer.spec":41,"./color.spec":42,"./core.spec":43,"./date.spec":44,"./mste.spec":46,"./naturals.spec":48}],46:[function(require,module,exports){
+},{"./buffer.spec":46,"./color.spec":47,"./core.spec":48,"./date.spec":49,"./mste.spec":51,"./naturals.spec":52}],51:[function(require,module,exports){
 "use strict";
 var chai_1 = require('chai');
-var mstools_1 = require('./mstools');
+var _1 = require('../');
 var data_graph = [{
         name: "Durand ¥-$-€",
         firstName: "Yves",
@@ -8432,7 +9164,7 @@ var data_graph = [{
     }, {
         name: "Durand",
         firstName: "Claire",
-        birthday: new mstools_1.MSDate(1952, 6, 18, 6, 22, 0)
+        birthday: new _1.MSDate(1952, 6, 18, 6, 22, 0)
     }, {
         name: "Durand",
         firstName: "Lou",
@@ -8528,10 +9260,10 @@ var objectToEncode = { "ACT": "select", "OPTS": {}, "VARS": { "search": { "code"
 var XVarArray = ["MSTE0102", 974, "CRC8A517221", 1, "XVar", 63, "STAT", "RSRC", "path", "basePath", "modificationDate", "isFolder", "CARD", "PACT", "OPTS", "CTXCLASS", "HELPERS", "cityName", "targets", "selection", "index", "name", "FIRST_FIELD", "INAM", "ACTIONS", "progPrint", "home", "add", "addConfig", "find", "configurationsList", "switch", "makesDefault", "CARDTITLE", "MID", "VARS", "search", "code", "options", "objectKey", "flags", "city", "activityType", "globals", "strings", "nameRestriction", "value", "searchMode", "type", "activity", "tutor", "proprio", "parent", "#default#", "searchTitleMessage", "searchSwitch", "enabledObjects", "configsForm", "defaultSwitch", "forceDontChoice", "found", "mapSwitch", "selectTable", "columns", "cityColumn", "nameColumn", "parentIndexSelector", "comparisonSelector", "target", 30, 10, 0, 20, 2, 1, 31, 1, 30, 4, 2, 21, "W:\\PlanitecMs\\Library\\XNet\\PlanitecServer.xna\\Resources\\Microstep\\MASH\\interfaces\\fr\\placeSearch@placeSearch.json", 3, 21, "_main_\/interfaces\/fr\/placeSearch@placeSearch", 4, 23, 1404138188.000000000000000, 5, 20, 0, 6, 21, "placeSearch", 7, 21, "newContext", 8, 30, 3, 9, 21, "PPlaceSelectionContext", 10, 30, 1, 11, 32, 30, 4, 2, 21, "W:\\PlanitecMs\\Library\\XNet\\SharedResources\\misc\\zipCodes.csv", 3, 21, "_main_\/misc\/zipCodes", 4, 23, 1404138188.000000000000000, 5, 20, 0, 30, 4, 12, 31, 1, 21, "cityName", 13, 21, "indexName", 14, 9, 22, 15, 21, "zipCodes", 16, 32, 21, "name", 21, "search", 17, 9, 8, 18, 30, 8, 19, 20, 0, 20, 20, 7, 21, 20, 0, 22, 20, 0, 23, 20, 0, 24, 20, 0, 25, 20, 0, 26, 20, 0, 27, 21, "\/Gestion des lieux\/S\u00E9lection", 28, 20, 2, 29, 30, 4, 30, 30, 11, 31, 50, 4, 32, 32, 0, 0, 14, 12, -1, 33, 12, -1, 34, 13, 264, 15, 50, 4, 32, 32, 0, 20, 100, 14, 12, -1, 33, 12, -1, 34, 13, 264, 35, 50, 4, 32, 32, 0, 0, 14, 12, -1, 33, 12, -1, 34, 13, 264, 36, 50, 5, 37, 30, 1, 38, 31, 86, 21, "ARTS MARTIAUX", 21, "ATHLETISME", 21, "AVIRON", 21, "BADMINTON", 21, "BADMINTON-Scolaire", 21, "BASKET-BALL", 21, "BOOMERANG", 21, "BOULE DE FORT", 21, "BOULE LYONNAISE", 21, "BOXE", 21, "BOXE AMERICAINE", 21, "BOXE ANGLAISE", 21, "BOXE FRANCAISE", 21, "BOXE THAILANDAISE", 21, "CANNE ET BATON", 21, "CANOE KAYAK", 21, "CAPOEIRA", 21, "CATCH", 21, "CONCERTS", 21, "COURS EPS", 21, "CYCLISME", 21, "CYCLOTOURISME", 21, "DANSE", 21, "DANSE SUR GLACE", 21, "DIVERS", 21, "ESCALADE", 21, "ESCRIME", 21, "FLECHETTE", 21, "FOOT EN SALLE", 21, "FOOTBALL", 21, "FOOTBALL AMERICAIN", 21, "FORMATIONS", 21, "GOLF", 21, "GRIMPER A LA CORDE", 21, "GYMNASTIQUE", 21, "GYMNASTIQUE ENTRETIEN", 21, "HALTEROPHILIE", 21, "HANDBALL", 21, "HOCKEY SUR GAZON", 21, "HOCKEY SUR GLACE", 21, "INTERVIEW\/ RADIO\/TELE", 21, "JU JITSU", 21, "JUDO", 21, "KARATE", 21, "KENDO", 21, "KIN-BALL", 21, "LUTTE", 21, "MOTOCYCLISME", 21, "MULTISPORTS", 21, "MUSCULATION", 21, "NETTOYAGE", 21, "PARACHUTISME", 21, "PATINAGE SUR GLACE", 21, "PETANQUE", 21, "PLANCHE A VOILE", 21, "PLONGEE SOUS MARINE", 21, "PREPA.MANIF.", 21, "RECEPTIONS\/FESTIVITES", 21, "REUNIONS", 21, "RINGUETTE", 21, "ROLLER HOCKEY", 21, "ROLLER SKATING", 21, "RUGBY", 21, "SAUNA", 21, "SPELEOLOGIE", 21, "SPORTS DE GLACE", 21, "SPORTS SCOLAIRES", 21, "TAEKWONDO", 21, "TAI DOH", 21, "TAI JITSU", 21, "TENNIS", 21, "TENNIS DE TABLE", 21, "TIR A L'ARC", 21, "TIR A LA CIBLE", 21, "TONFA", 21, "TONFA", 21, "TRAMPOLINE", 21, "TRAVAUX", 21, "TRIATHLON", 21, "TWIRLING", 21, "TX PAR ENTREPRISE", 21, "ULTIMATE", 21, "VETERANS", 21, "VIET VO DAO", 21, "VOILE", 21, "VOLLEY BALL", 32, 32, 0, 0, 14, 12, -1, 33, 12, -1, 34, 13, 18952, 39, 50, 5, 34, 13, 2824, 40, 3, 32, 32, 0, 0, 14, 12, -1, 33, 12, -1, 41, 50, 5, 34, 13, 17672, 40, 20, 4, 32, 32, 0, 0, 14, 12, -1, 33, 12, -1, 42, 50, 5, 37, 30, 1, 38, 31, 24, 21, "Aire de sports de Glace", 21, "Court de Tennis Couvert", 21, "Court de Tennis Plein-Air", 21, "Divers", 21, "Equipement d'athletisme", 21, "HALLES", 21, "J.d'arc C.", 21, "J.d'arc P.A.", 21, "PARKINGS", 21, "Pas de tir", 21, "Plaine de Golf", 21, "Plateau EPS", 21, "Salle de Reception", 21, "Salle Omnisports", 21, "Salle Polyvalente", 21, "Salle Specialisee", 21, "SALLES", 21, "Skate par et Velo freestyle", 21, "Terrain d'Honneur", 21, "Terrain en herbe", 21, "Terrain exterieur", 21, "Terrain stabilise", 21, "Terrain synthetique", 21, "Velodrome", 32, 32, 0, 0, 14, 12, -1, 33, 12, -1, 34, 13, 18952, 43, 50, 5, 37, 30, 1, 38, 31, 89, 21, "ARTS MARTIAUX \u00E9\u00E0", 21, "ATHLETISME", 21, "AVIRON", 21, "BADMINTON", 21, "BADMINTON-Scolaire", 21, "BASKET-BALL", 21, "BOOMERANG", 21, "BOULE DE FORT", 21, "BOULE LYONNAISE", 21, "BOXE", 21, "BOXE AMERICAINE", 21, "BOXE ANGLAISE", 21, "BOXE FRANCAISE", 21, "BOXE THAILANDAISE", 21, "CANNE ET BATON", 21, "CANOE KAYAK", 21, "CAPOEIRA", 21, "CATCH", 21, "CONCERTS", 21, "COURS EPS", 21, "CYCLISME", 21, "CYCLOTOURISME", 21, "DANSE", 21, "DANSE SUR GLACE", 21, "DIVERS", 21, "ESCALADE", 21, "ESCRIME", 21, "FLECHETTE", 21, "FOOT EN SALLE", 21, "FOOTBALL", 21, "FOOTBALL AMERICAIN", 21, "FORMATIONS", 21, "GOLF", 21, "GRIMPER A LA CORDE", 21, "GYMNASTIQUE", 21, "GYMNASTIQUE ENTRETIEN", 21, "HALTEROPHILIE", 21, "HANDBALL", 21, "HOCKEY SUR GAZON", 21, "HOCKEY SUR GLACE", 21, "INTERVIEW\/ RADIO\/TELE", 21, "JU JITSU", 21, "JUDO", 21, "KARATE", 21, "KENDO", 21, "KIN-BALL", 21, "LUTTE", 21, "MOTOCYCLISME", 21, "MULTISPORTS", 21, "MUSCULATION", 21, "NATATION", 21, "NETTOYAGE", 21, "PARACHUTISME", 21, "PATINAGE SUR GLACE", 21, "PETANQUE", 21, "PLANCHE A VOILE", 21, "PLONGEE SOUS MARINE", 21, "PREPA.MANIF.", 21, "RECEPTIONS\/FESTIVITES", 21, "REUNIONS", 21, "RINGUETTE", 21, "ROLLER HOCKEY", 21, "ROLLER SKATING", 21, "RUGBY", 21, "SAUNA", 21, "SPELEOLOGIE", 21, "SPORTS DE GLACE", 21, "SPORTS SCOLAIRES", 21, "SUBAQUATIQUE", 21, "TAEKWONDO", 21, "TAI DOH", 21, "TAI JITSU", 21, "TENNIS", 21, "TENNIS DE TABLE", 21, "TIR A L'ARC", 21, "TIR A LA CIBLE", 21, "TONFA", 21, "TONFA", 21, "TRAMPOLINE", 21, "TRAVAUX", 21, "TRIATHLON", 21, "TWIRLING", 21, "TX PAR ENTREPRISE", 21, "ULTIMATE", 21, "VETERANS", 21, "VIET VO DAO", 21, "VOILE", 21, "VOLLEY BALL", 21, "WATER-POLO", 32, 32, 0, 0, 14, 12, -1, 33, 12, -1, 34, 13, 18952, 44, 50, 4, 32, 32, 0, 0, 14, 12, -1, 33, 12, -1, 34, 13, 264, 45, 50, 4, 32, 32, 0, 0, 14, 12, -1, 33, 12, -1, 34, 13, 264, 46, 50, 4, 32, 32, 0, 0, 14, 12, -1, 33, 12, -1, 34, 13, 264, 47, 30, 3, 48, 50, 5, 34, 13, 392, 40, 21, "Choisissez un nouveau Lieu \u00E0 \u00E9diter ou cr\u00E9ez-en un", 32, 32, 0, 0, 14, 12, -1, 33, 12, -1, 49, 50, 5, 34, 13, 17672, 40, 20, 0, 32, 32, 0, 0, 14, 12, -1, 33, 12, -1, 25, 50, 6, 37, 30, 1, 50, 26, 3, 0, 1, 2, 34, 13, 17416, 40, 20, 0, 32, 32, 0, 0, 14, 12, -1, 33, 12, -1, 51, 30, 2, 52, 50, 5, 34, 13, 17672, 40, 20, 0, 32, 32, 0, 0, 14, 12, -1, 33, 12, -1, 24, 50, 5, 37, 30, 1, 53, 21, "YES", 32, 32, 31, 5, 21, "AIRES", 21, "AIRES 2", 21, "Tennis couverts", 21, "ddd", 21, "sss", 25, "", 14, 12, -1, 33, 12, -1, 34, 13, 16704, 54, 30, 2, 55, 50, 5, 34, 13, 17800, 40, 20, 0, 32, 32, 0, 0, 14, 12, -1, 33, 12, -1, 56, 50, 5, 37, 30, 4, 57, 30, 2, 58, 32, 21, "city", 0, 59, 32, 9, 25, 0, 60, 21, "parentIndex", 61, 9, 25, 62, 21, "select", 32, 32, 31, 0, 25, "", 14, 12, -1, 33, 12, -1, 34, 13, 18112];
 function test_mste(mste, value) {
     var decoded, encoded, redecoded;
-    chai_1.expect(function () { decoded = mstools_1.MSTE.parse(mste); }).not.throw();
+    chai_1.expect(function () { decoded = _1.MSTE.parse(mste); }).not.throw();
     chai_1.expect(decoded).to.deep.equal(value, JSON.stringify({ mste: mste, value: value, decoded: decoded }));
-    chai_1.expect(function () { encoded = mstools_1.MSTE.stringify(value); }).not.throw();
-    chai_1.expect(function () { redecoded = mstools_1.MSTE.parse(encoded); }).not.throw();
+    chai_1.expect(function () { encoded = _1.MSTE.stringify(value); }).not.throw();
+    chai_1.expect(function () { redecoded = _1.MSTE.parse(encoded); }).not.throw();
     chai_1.expect(redecoded).to.deep.equal(value, JSON.stringify({ mste: mste, value: value, encoded: encoded, redecoded: redecoded }));
 }
 describe("MSTE", function () {
@@ -8540,35 +9272,35 @@ describe("MSTE", function () {
         it('true', function () { test_mste("[\"MSTE0102\",6,\"CRC9B5A0F31\",0,0,1]", true); });
         it('false', function () { test_mste("[\"MSTE0102\",6,\"CRCB0775CF2\",0,0,2]", false); });
         it('empty string', function () { test_mste("[\"MSTE0102\",6,\"CRCA96C6DB3\",0,0,3]", ""); });
-        it('empty data', function () { test_mste("[\"MSTE0102\",6,\"CRCE62DFB74\",0,0,4]", new mstools_1.MSBuffer()); });
+        it('empty data', function () { test_mste("[\"MSTE0102\",6,\"CRCE62DFB74\",0,0,4]", new _1.MSBuffer()); });
         it('number', function () { test_mste("[\"MSTE0102\",7,\"CRCBF421375\",0,0,20,12.34]", 12.34); });
         it('string 1', function () { test_mste("[\"MSTE0102\",7,\"CRC09065CB6\",0,0,21,\"My beautiful string \\u00E9\\u00E8\"]", "My beautiful string éè"); });
         it('string 2', function () { test_mste("[\"MSTE0102\",7,\"CRC4A08AB7A\",0,0,21,\"Json \\\\a\\/b\\\"c\\u00C6\"]", "Json \\a/b\"cÆ"); });
-        it('local date', function () { test_mste("[\"MSTE0102\",7,\"CRC093D5173\",0,0,22,978307200]", new mstools_1.MSDate(2001, 1, 1, 0, 0, 0)); });
+        it('local date', function () { test_mste("[\"MSTE0102\",7,\"CRC093D5173\",0,0,22,978307200]", new _1.MSDate(2001, 1, 1, 0, 0, 0)); });
         it('gmt date', function () { test_mste("[\"MSTE0102\",7,\"CRCFDED185D\",0,0,23,978307200.000000000000000]", new Date(978307200 * 1000)); });
-        it('color', function () { test_mste("[\"MSTE0102\",7,\"CRCAB284946\",0,0,24,4034942921]", new mstools_1.MSColor(128, 87, 201, 15)); });
-        it('data', function () { test_mste("[\"MSTE0102\",7,\"CRC4964EA3B\",0,0,25,\"YTF6MmUzcjR0NA==\"]", new mstools_1.MSBuffer("a1z2e3r4t4")); });
-        it('naturals', function () { test_mste("[\"MSTE0102\",8,\"CRCD6330919\",0,0,26,1,256]", new mstools_1.MSNaturalArray([256])); });
+        it('color', function () { test_mste("[\"MSTE0102\",7,\"CRCAB284946\",0,0,24,4034942921]", new _1.MSColor(128, 87, 201, 15)); });
+        it('data', function () { test_mste("[\"MSTE0102\",7,\"CRC4964EA3B\",0,0,25,\"YTF6MmUzcjR0NA==\"]", new _1.MSBuffer("a1z2e3r4t4")); });
+        it('naturals', function () { test_mste("[\"MSTE0102\",8,\"CRCD6330919\",0,0,26,1,256]", new _1.MSNaturalArray([256])); });
         it('dictionary', function () { test_mste("[\"MSTE0102\",15,\"CRC891261B3\",0,2,\"key1\",\"key2\",30,2,0,21,\"First object\",1,21,\"Second object\"]", { 'key1': 'First object', 'key2': 'Second object' }); });
         it('array', function () { test_mste("[\"MSTE0102\",11,\"CRC1258D06E\",0,0,31,2,21,\"First object\",21,\"Second object\"]", ["First object", "Second object"]); });
-        it('couple', function () { test_mste("[\"MSTE0102\",10,\"CRCF8392337\",0,0,32,21,\"First member\",21,\"Second member\"]", new mstools_1.MSCouple("First member", "Second member")); });
+        it('couple', function () { test_mste("[\"MSTE0102\",10,\"CRCF8392337\",0,0,32,21,\"First member\",21,\"Second member\"]", new _1.MSCouple("First member", "Second member")); });
         it('repo', function () { test_mste("[\"MSTE0102\",21,\"CRCD959E1CB\",0,3,\"20061\",\"entity\",\"0\",30,2,0,30,1,1,31,1,21,\"R_Right\",2,30,0]", { '20061': { 'entity': ['R_Right'] }, '0': {} }); });
         it("encoding/decoding", function () {
-            var mste = mstools_1.MSTE.stringify(data_array, { version: 0x102 });
-            var r = mstools_1.MSTE.parse(mste);
+            var mste = _1.MSTE.stringify(data_array, { version: 0x102 });
+            var r = _1.MSTE.parse(mste);
             chai_1.expect(r).to.deep.equal(data_array);
         });
         it("decodes OBJC demo mste chain", function () {
-            var r = mstools_1.MSTE.parse(JMChain);
+            var r = _1.MSTE.parse(JMChain);
             chai_1.expect(r[0].firstName).to.eq("Yves");
             chai_1.expect(r[0]["maried-to"].firstName).to.eq("Claire"); // Yves's wife is Claire, this reference is correct
             chai_1.expect(r[1]).to.eq(r[0]["maried-to"]);
             chai_1.expect(r[2].firstName).to.eq("Lou");
-            chai_1.expect(r[3]).to.deep.equal(new mstools_1.MSBuffer());
+            chai_1.expect(r[3]).to.deep.equal(new _1.MSBuffer());
             chai_1.expect(r[4].toBase64String()).to.eq("Rjd5NA==");
             chai_1.expect(r[5]).to.eq(r[0]);
             chai_1.expect(r[6]).to.eq(r[4]);
-            chai_1.expect(r[7]).to.deep.equal(new mstools_1.MSBuffer());
+            chai_1.expect(r[7]).to.deep.equal(new _1.MSBuffer());
         });
         it("decodes OBJC demo mste chain with local classes", function () {
             var Person1 = (function () {
@@ -8581,7 +9313,7 @@ describe("MSTE", function () {
                 }
                 return Person2;
             }());
-            var r = mstools_1.MSTE.parse(JMChain, {
+            var r = _1.MSTE.parse(JMChain, {
                 classes: {
                     'Person': Person1,
                     'Person2': Person2
@@ -8594,20 +9326,20 @@ describe("MSTE", function () {
             chai_1.expect(r[0]["maried-to"].firstName).to.eq("Claire"); // Yves's wife is Claire, this reference is correct
             chai_1.expect(r[1]).to.eq(r[0]["maried-to"]);
             chai_1.expect(r[2].firstName).to.eq("Lou");
-            chai_1.expect(r[3]).to.deep.equal(new mstools_1.MSBuffer());
+            chai_1.expect(r[3]).to.deep.equal(new _1.MSBuffer());
             chai_1.expect(r[4].toBase64String()).to.eq("Rjd5NA==");
             chai_1.expect(r[5]).to.eq(r[0]);
             chai_1.expect(r[6]).to.eq(r[4]);
-            chai_1.expect(r[7]).to.deep.equal(new mstools_1.MSBuffer());
+            chai_1.expect(r[7]).to.deep.equal(new _1.MSBuffer());
         });
         it("decodes a natural array", function () {
-            var r = mstools_1.MSTE.parse("[\"MSTE0102\",8,\"CRCD6330919\",0,0,26,1,256]");
-            chai_1.expect(r).to.be.instanceof(mstools_1.MSNaturalArray);
+            var r = _1.MSTE.parse("[\"MSTE0102\",8,\"CRCD6330919\",0,0,26,1,256]");
+            chai_1.expect(r).to.be.instanceof(_1.MSNaturalArray);
             chai_1.expect(r[0]).to.eq(256);
         });
         it("bug on code 6", function () {
-            var mste = mstools_1.MSTE.stringify(objectToEncode);
-            var r = mstools_1.MSTE.parse(mste);
+            var mste = _1.MSTE.stringify(objectToEncode);
+            var r = _1.MSTE.parse(mste);
         });
         it("Bug on Xvar class not re-encoded properly", function () {
             var XVar = (function () {
@@ -8616,18 +9348,18 @@ describe("MSTE", function () {
                 XVar.prototype.encodeToMSTE = function (encoder) { encoder.encodeDictionary(this, "XVar"); };
                 return XVar;
             }());
-            var r = mstools_1.MSTE.parse(XVarArray, { classes: { "XVar": XVar } });
-            var e = mstools_1.MSTE.stringify(r);
-            var r2 = mstools_1.MSTE.parse(XVarArray, { classes: { "XVar": XVar } });
+            var r = _1.MSTE.parse(XVarArray, { classes: { "XVar": XVar } });
+            var e = _1.MSTE.stringify(r);
+            var r2 = _1.MSTE.parse(XVarArray, { classes: { "XVar": XVar } });
         });
         it("encodes simple references (same ref is used multiple times: a person is father to one and married to another)", function () {
-            var m = mstools_1.MSTE.stringify(data_graph);
-            var r = mstools_1.MSTE.parse(m);
+            var m = _1.MSTE.stringify(data_graph);
+            var r = _1.MSTE.parse(m);
             chai_1.expect(data_graph).to.deep.equal(r);
         });
         it("encodes simple references with a true class", function () {
-            var m = mstools_1.MSTE.stringify(data_graph2);
-            var r = mstools_1.MSTE.parse(m, {
+            var m = _1.MSTE.stringify(data_graph2);
+            var r = _1.MSTE.parse(m, {
                 classes: {
                     "person": LocalPerson
                 }
@@ -8639,15 +9371,15 @@ describe("MSTE", function () {
             chai_1.expect(data_graph2).to.deep.equal(r);
         });
         it("bug: encode bug empty buffer", function () {
-            var data = new mstools_1.MSBuffer();
-            var mste = mstools_1.MSTE.stringify(data);
-            var data0 = mstools_1.MSTE.parse(mste);
+            var data = new _1.MSBuffer();
+            var mste = _1.MSTE.stringify(data);
+            var data0 = _1.MSTE.parse(mste);
             chai_1.expect(data.isEqualTo(data0)).to.eq(true);
         });
     });
     describe('0101', function () {
         it("decoding complex", function () {
-            var r = mstools_1.MSTE.parse(oldMSTEString);
+            var r = _1.MSTE.parse(oldMSTEString);
             chai_1.expect(r.PACT).to.eq('switch');
             chai_1.expect(r.VARS.planningForm.startingHourField.options.secondMember).to.eq(22);
             chai_1.expect(r.VARS.planningForm.visuPop.flags).to.eq(17416);
@@ -8657,21 +9389,21 @@ describe("MSTE", function () {
             chai_1.expect(r.INAM).to.eq('planning');
         });
         it("encoding/decoding", function () {
-            var mste = mstools_1.MSTE.stringify(data_array, { version: 0x101 });
-            var r = mstools_1.MSTE.parse(mste);
+            var mste = _1.MSTE.stringify(data_array, { version: 0x101 });
+            var r = _1.MSTE.parse(mste);
             chai_1.expect(r).to.deep.equal(data_array);
         });
         it("encodes simple references (same ref is used multiple times: a person is father to one and married to another)", function () {
-            var m = mstools_1.MSTE.stringify(data_graph, { version: 0x101 });
-            var r = mstools_1.MSTE.parse(m);
+            var m = _1.MSTE.stringify(data_graph, { version: 0x101 });
+            var r = _1.MSTE.parse(m);
             // beware : encoding in precedent version will gives you standard dates with no milliseconds ...
             chai_1.expect(r[1].birthday).to.be.instanceof(Date);
-            r[1].birthday = new mstools_1.MSDate(r[1].birthday);
+            r[1].birthday = new _1.MSDate(r[1].birthday);
             chai_1.expect(data_graph).to.deep.equal(r);
         });
         it("encodes simple references with a true class", function () {
-            var m = mstools_1.MSTE.stringify(data_graph2, { version: 0x101 });
-            var r = mstools_1.MSTE.parse(m, {
+            var m = _1.MSTE.stringify(data_graph2, { version: 0x101 });
+            var r = _1.MSTE.parse(m, {
                 classes: {
                     "person": LocalPerson
                 }
@@ -8685,18 +9417,14 @@ describe("MSTE", function () {
     });
 });
 
-},{"./mstools":47,"chai":4}],47:[function(require,module,exports){
-"use strict";
-module.exports = MSTools;
-
-},{}],48:[function(require,module,exports){
+},{"../":42,"chai":4}],52:[function(require,module,exports){
 "use strict";
 var chai_1 = require('chai');
-var mstools_1 = require('./mstools');
+var _1 = require('../');
 describe("MSNaturalArray", function () {
     it("Testing Array subclass behavior slice, concat and splice", function () {
-        var n = new mstools_1.MSNaturalArray(1, 2, 3);
-        var n2 = new mstools_1.MSNaturalArray([2, 7, 8]);
+        var n = new _1.MSNaturalArray(1, 2, 3);
+        var n2 = new _1.MSNaturalArray([2, 7, 8]);
         var n3;
         chai_1.expect(n.length).to.eq(3);
         chai_1.expect(n[1]).to.eq(2);
@@ -8708,39 +9436,709 @@ describe("MSNaturalArray", function () {
         n.push(8);
         chai_1.expect(n instanceof Array).to.eq(true);
         n3 = n.slice(1, 4);
-        chai_1.expect(n3 instanceof mstools_1.MSNaturalArray).to.eq(true);
+        chai_1.expect(n3 instanceof _1.MSNaturalArray).to.eq(true);
         chai_1.expect(n3).to.deep.equal(n2);
-        n3 = (new mstools_1.MSNaturalArray(1, 2, 3, 4, 5, 6)).concat(n3);
-        chai_1.expect(n3).to.deep.equal(new mstools_1.MSNaturalArray(1, 2, 3, 4, 5, 6, 2, 7, 8));
+        n3 = (new _1.MSNaturalArray(1, 2, 3, 4, 5, 6)).concat(n3);
+        chai_1.expect(n3).to.deep.equal(new _1.MSNaturalArray(1, 2, 3, 4, 5, 6, 2, 7, 8));
         n3.splice(6, 1);
-        chai_1.expect(n3).to.deep.equal(new mstools_1.MSNaturalArray(1, 2, 3, 4, 5, 6, 7, 8));
+        chai_1.expect(n3).to.deep.equal(new _1.MSNaturalArray(1, 2, 3, 4, 5, 6, 7, 8));
         n3.unshift(101, 0, 0, 0);
-        chai_1.expect(n3).to.deep.equal(new mstools_1.MSNaturalArray(101, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8));
+        chai_1.expect(n3).to.deep.equal(new _1.MSNaturalArray(101, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8));
         n3.splice(0, 4);
         n3.splice(8, 0, 9);
-        chai_1.expect(n3).to.deep.equal(new mstools_1.MSNaturalArray(1, 2, 3, 4, 5, 6, 7, 8, 9));
+        chai_1.expect(n3).to.deep.equal(new _1.MSNaturalArray(1, 2, 3, 4, 5, 6, 7, 8, 9));
         n3.splice(5, 2, 66, 77, 771, 772, 773, 774, 775);
-        chai_1.expect(n3).to.deep.equal(new mstools_1.MSNaturalArray(1, 2, 3, 4, 5, 66, 77, 771, 772, 773, 774, 775, 8, 9));
+        chai_1.expect(n3).to.deep.equal(new _1.MSNaturalArray(1, 2, 3, 4, 5, 66, 77, 771, 772, 773, 774, 775, 8, 9));
         chai_1.expect(n3 instanceof Array).to.eq(true);
-        chai_1.expect(n3 instanceof mstools_1.MSNaturalArray).to.eq(true);
+        chai_1.expect(n3 instanceof _1.MSNaturalArray).to.eq(true);
         //expect(Array.isArray(n3)).to.eq(true) ;
     });
     it("Testing constructor", function () {
-        var n = new mstools_1.MSNaturalArray();
+        var n = new _1.MSNaturalArray();
         chai_1.expect(n.length).to.eq(0);
-        n = new mstools_1.MSNaturalArray(4799);
+        n = new _1.MSNaturalArray(4799);
         chai_1.expect(n.length).to.eq(1);
         chai_1.expect(JSON.stringify(n)).to.eq("[4799]");
-        n = new mstools_1.MSNaturalArray(1, 8, 3, 7);
+        n = new _1.MSNaturalArray(1, 8, 3, 7);
         chai_1.expect(n.length).to.eq(4);
         chai_1.expect(JSON.stringify(n)).to.eq("[1,8,3,7]");
     });
     it("Testing constructors with several values", function () {
-        var n = new mstools_1.MSNaturalArray(21, 356, 17, 65.5);
+        var n = new _1.MSNaturalArray(21, 356, 17, 65.5);
         chai_1.expect(JSON.stringify(n)).to.eq("[21,356,17,65]");
         n.unshift(45, 13);
         //expect(MSTools.stringify(n)).to.eq("[45,13,21,356,17,65]");
     });
 });
 
-},{"./mstools":47,"chai":4}]},{},[45]);
+},{"../":42,"chai":4}],53:[function(require,module,exports){
+"use strict";
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+var base64Tokens = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+var base64Index = [
+    -2, -2, -2, -2, -2, -2, -2, -2, -2, -1, -1, -2, -2, -1, -2, -2,
+    -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
+    -1, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, 62, -2, -2, -2, 63,
+    52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -2, -2, -2, -2, -2, -2,
+    -2, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+    15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -2, -2, -2, -2, -2,
+    -2, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+    41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -2, -2, -2, -2, -2
+];
+var base64URLTokens = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+var base64URLIndex = [
+    -2, -2, -2, -2, -2, -2, -2, -2, -2, -1, -1, -2, -2, -1, -2, -2,
+    -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,
+    -1, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, 62, -2, -2,
+    52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -2, -2, -2, -2, -2, -2,
+    -2, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+    15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -2, -2, -2, -2, 63,
+    -2, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+    41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -2, -2, -2, -2, -2
+];
+var base64PaddingChar = '=';
+var base64DecodeFn = [
+    function (result, array, dc) { array[0] = (dc << 2) & 0xff; },
+    function (result, array, dc) { array[0] |= dc >> 4; array[1] = ((dc & 0x0f) << 4) & 0xff; },
+    function (result, array, dc) { array[1] |= dc >> 2; array[2] = ((dc & 0x03) << 6) & 0xff; },
+    function (result, array, dc) {
+        array[2] |= dc;
+        result.push(array[0], array[1], array[2]);
+        array[0] = array[1] = array[2] = 0;
+    }
+];
+function isArrayLike(arr) {
+    return arr && typeof arr.length === "number";
+}
+function unshift(arr, offset, args, allowArray, map) {
+    var values = [];
+    push(values, offset, args, allowArray, map);
+    Array.prototype.unshift.apply(arr, values);
+}
+exports.unshift = unshift;
+function push(arr, offset, args, allowArray, map) {
+    var i = offset, count = args.length;
+    for (; i < count; i++) {
+        var a = args[i];
+        if (allowArray && isArrayLike(a)) {
+            push(arr, 0, a, false, map);
+        }
+        else {
+            var idx = arr.length;
+            arr.length++;
+            arr[idx] = map(a);
+        }
+    }
+}
+exports.push = push;
+function safeBufferValue(value) {
+    return Math.max(0, value | 0) & 0xff;
+}
+var MSBuffer = (function (_super) {
+    __extends(MSBuffer, _super);
+    function MSBuffer() {
+        _super.call(this);
+        var count = arguments.length;
+        if (count === 1 && typeof arguments[0] === 'string') {
+            var str = arguments[0];
+            for (var i = 0, len = str.length; i < len; i++)
+                this.push(str.charCodeAt(i) & 0xff);
+        }
+        else {
+            push(this, 0, arguments, true, safeBufferValue);
+        }
+    }
+    MSBuffer.bufferFromString = function (s, encoding) {
+        if (encoding === void 0) { encoding = 'utf8'; }
+        var result = new MSBuffer();
+        var i, len = s.length;
+        for (i = 0; i < len; i++) {
+            var c = s.charCodeAt(i);
+            if (c < 128) {
+                result.push(c);
+            }
+            else if (c < 2048) {
+                result.push((c >> 6) | 192);
+                result.push((c & 63) | 128);
+            }
+            else {
+                result.push((c >> 12) | 224);
+                result.push(((c >> 6) & 63) | 128);
+                result.push((c & 63) | 128);
+            }
+        }
+        return result;
+    };
+    MSBuffer.bufferWithBase64String = function (s, index, paddingChar) {
+        var len = s.length;
+        var result = new MSBuffer();
+        if (len > 0) {
+            var j, i = 0, c, dc, array = [];
+            array[0] = array[1] = array[2] = 0;
+            index = index || base64Index;
+            var paddingCharCode = (paddingChar || base64PaddingChar).charCodeAt(0);
+            for (j = 0; j < len; j++) {
+                c = s.charCodeAt(j);
+                if (c === paddingCharCode) {
+                    break;
+                }
+                else if (c > 127) {
+                    throw new Error("bad character");
+                    ;
+                } // bad character
+                dc = index[c];
+                if (dc === -1) {
+                    continue;
+                } // we skip spaces and separators
+                else if (dc === -2) {
+                    throw new Error("bad character");
+                    ;
+                } // bad character
+                base64DecodeFn[i % 4](result, array, dc);
+                i++;
+            }
+            if (c === paddingCharCode) {
+                i = i % 4;
+                if (i === 1) {
+                    throw new Error("bad character");
+                    ;
+                }
+                i--;
+                for (j = 0; j < i; j++) {
+                    result.push(array[j]);
+                }
+            }
+        }
+        return result;
+    };
+    MSBuffer.prototype.unshift = function () {
+        unshift(this, 0, arguments, false, safeBufferValue);
+        return this.length;
+    };
+    MSBuffer.prototype.push = function () {
+        push(this, 0, arguments, false, safeBufferValue);
+        return this.length;
+    };
+    MSBuffer.prototype.concat = function () {
+        var ret = new MSBuffer();
+        Array.prototype.push.apply(ret, this);
+        push(ret, 0, arguments, true, safeBufferValue);
+        return ret;
+    };
+    MSBuffer.prototype.slice = function (start, end) {
+        return new MSBuffer(Array.prototype.slice.apply(this, arguments));
+    };
+    MSBuffer.prototype.splice = function (start, deleteCount) {
+        var items = [];
+        for (var _i = 2; _i < arguments.length; _i++) {
+            items[_i - 2] = arguments[_i];
+        }
+        return new MSBuffer(Array.prototype.splice.apply(this, arguments));
+    };
+    MSBuffer.prototype.toJSON = function () {
+        return Array.from(this);
+    };
+    MSBuffer.prototype.isEqualTo = function (other) {
+        return other instanceof MSBuffer && this.isEqualToBuffer(other);
+    };
+    MSBuffer.prototype.isEqualToBuffer = function (other) {
+        if (this === other)
+            return true;
+        if (!other || other.length !== this.length)
+            return false;
+        for (var i = 0, len = this.length; i < len; i++) {
+            if (this[i] !== other[i])
+                return false;
+        }
+        return true;
+    };
+    MSBuffer.prototype.toString = function () {
+        var i, count = this.length;
+        if (count) {
+            var array = [];
+            // console.log("count = "+count) ;
+            for (i = 0; i < count; i++) {
+                array.push(String.fromCharCode(this[i]));
+            }
+            return array.join('');
+        }
+        return "";
+    };
+    MSBuffer.prototype.toBase64String = function (tokens, paddingChar) {
+        return MSBuffer.encodeToBase64(this, tokens, paddingChar);
+    };
+    MSBuffer.encodeToBase64 = function (bytes, tokens, paddingChar) {
+        var i, end, ret = "", token;
+        tokens = tokens || base64Tokens;
+        paddingChar = paddingChar || base64PaddingChar;
+        if (bytes.length === 0) {
+            return '';
+        }
+        end = bytes.length - bytes.length % 3;
+        for (i = 0; i < end; i += 3) {
+            token = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
+            ret += tokens.charAt(token >> 18);
+            ret += tokens.charAt((token >> 12) & 0x3F);
+            ret += tokens.charAt((token >> 6) & 0x3f);
+            ret += tokens.charAt(token & 0x3f);
+        }
+        switch (bytes.length - end) {
+            case 1:
+                token = bytes[i] << 16;
+                ret += tokens.charAt(token >> 18) + tokens.charAt((token >> 12) & 0x3F) + paddingChar + paddingChar;
+                break;
+            case 2:
+                token = (bytes[i] << 16) | (bytes[i + 1] << 8);
+                ret += tokens.charAt(token >> 18) + tokens.charAt((token >> 12) & 0x3F) + tokens.charAt((token >> 6) & 0x3F) + paddingChar;
+                break;
+        }
+        return ret;
+    };
+    return MSBuffer;
+}(Array));
+exports.MSBuffer = MSBuffer;
+
+},{}],54:[function(require,module,exports){
+"use strict";
+var namedColors = {
+    beige: '#f5f5dc',
+    black: '#000000',
+    blue: '#0000ff',
+    brown: '#a52a2a',
+    cyan: '#00ffff',
+    fuchsia: '#ff00ff',
+    gold: '#ffd700',
+    gray: '#808080',
+    green: '#008000',
+    indigo: '#4b0082',
+    ivory: '#fffff0',
+    khaki: '#f0e68c',
+    lavender: '#e6e6fa',
+    magenta: '#ff00ff',
+    maroon: '#800000',
+    olive: '#808000',
+    orange: '#ffa500',
+    pink: '#ffc0cb',
+    purple: '#800080',
+    red: '#ff0000',
+    salmon: '#fa8072',
+    silver: '#c0c0c0',
+    snow: '#fffafa',
+    teal: '#008080',
+    tomato: '#ff6347',
+    turquoise: '#40e0d0',
+    violet: '#ee82ee',
+    wheat: '#f5deb3',
+    white: '#ffffff',
+    yellow: '#ffff00'
+};
+function parse0to255(v) {
+    if (v < 0 || v > 255 || Math.floor(v) !== v)
+        throw new Error("invalid color value");
+    return v;
+}
+function toHex(v) {
+    var r = v.toString(16);
+    return r.length < 2 ? "00".slice(0, 2 - r.length) + r : r;
+}
+var hexParsers = {
+    4: {
+        rx: /^#([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])$/,
+        mult: 16
+    },
+    7: {
+        rx: /^#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/,
+        mult: 1
+    },
+    9: {
+        rx: /^#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/,
+        mult: 1
+    }
+};
+var HSBToRGB = [
+    function (brightness, p, q, t) { return new MSColor(brightness, t, p); },
+    function (brightness, p, q, t) { return new MSColor(q, brightness, p); },
+    function (brightness, p, q, t) { return new MSColor(p, brightness, t); },
+    function (brightness, p, q, t) { return new MSColor(p, q, brightness); },
+    function (brightness, p, q, t) { return new MSColor(t, p, brightness); },
+    function (brightness, p, q, t) { return new MSColor(brightness, p, q); },
+    function (brightness, p, q, t) { return new MSColor(brightness, t, p); }
+];
+var MSColor = (function () {
+    function MSColor(r, g, b, a) {
+        if (typeof r === 'string') {
+            r = r.replace(/ /g, '');
+            r = namedColors[r] || r;
+            var parser = hexParsers[r.length];
+            var m = parser && r.match(parser.rx);
+            if (m) {
+                this.red = parseInt(m[1], 16) * parser.mult;
+                this.green = parseInt(m[2], 16) * parser.mult;
+                this.blue = parseInt(m[3], 16) * parser.mult;
+                this.alpha = m[4] ? parseInt(m[4], 16) * parser.mult : 255;
+                return;
+            }
+            throw new Error("invalid color value");
+        }
+        else if (typeof r === 'number') {
+            if (typeof g === 'number' && typeof b === 'number') {
+                this.red = parse0to255(r);
+                this.green = parse0to255(g);
+                this.blue = parse0to255(b);
+                this.alpha = typeof a === 'number' ? parse0to255(a) : 255;
+                return;
+            }
+            else if (g === undefined) {
+                // the 4 bytes contains the RTGB value TTRRGGBB where TT is the transparency (0 means opaque)
+                this.alpha = 0xff - ((r >> 24) & 0xff);
+                this.red = (r >> 16) & 0xff;
+                this.green = (r >> 8) & 0xff;
+                this.blue = r & 0xff;
+                return;
+            }
+        }
+        throw new Error("invalid constructor parameters");
+    }
+    MSColor.lighter = function (X) { X /= 255.0; return Math.round((2.0 * (X) * (X) / 3.0 + (X) / 2.0 + 0.25) * 255); };
+    MSColor.darker = function (X) { X /= 255.0; return Math.round((-(X) * (X) / 3 + 5.0 * (X) / 6.0) * 255); };
+    MSColor.colorWithHSB = function (hue, saturation, brightness) {
+        if (typeof hue === "object" && "h" in hue && "s" in hue && "b" in hue) {
+            brightness = hue.b;
+            saturation = hue.s;
+            hue = hue.h;
+        }
+        if (brightness !== 0) {
+            var i = (Math.max(0, Math.floor(hue * 6))) % 7, f = (hue * 6) - i, p = brightness * (1 - saturation), q = brightness * (1 - (saturation * f)), t = brightness * (1 - (saturation * (1 - f)));
+            return HSBToRGB[i](brightness, p, q, t);
+        }
+        return MSColor.BLACK;
+    };
+    MSColor.prototype.luminance = function () { return (0.3 * this.red + 0.59 * this.green + 0.11 * this.blue) / 255.0; };
+    MSColor.prototype.isPale = function () { return this.luminance() > 0.6 ? true : false; };
+    MSColor.prototype.lighterColor = function () { return new MSColor(MSColor.lighter(this.red), MSColor.lighter(this.green), MSColor.lighter(this.blue), this.alpha); };
+    MSColor.prototype.darkerColor = function () { return new MSColor(MSColor.darker(this.red), MSColor.darker(this.green), MSColor.darker(this.blue), this.alpha); };
+    MSColor.prototype.lightest = function () {
+        return new MSColor(MSColor.darker(MSColor.darker(this.red)), MSColor.darker(MSColor.darker(this.green)), MSColor.darker(MSColor.darker(this.blue)), this.alpha);
+    };
+    MSColor.prototype.darkest = function () {
+        return new MSColor(MSColor.darker(MSColor.darker(this.red)), MSColor.darker(MSColor.darker(this.green)), MSColor.darker(MSColor.darker(this.blue)), this.alpha);
+    };
+    MSColor.prototype.matchingColor = function () { return this.isPale() ? this.darkest() : this.lightest(); };
+    MSColor.prototype.toString = function () {
+        return this.alpha === 255 ? '#' + toHex(this.red) + toHex(this.green) + toHex(this.blue) : "rgba(" + this.red + "," + this.green + "," + this.blue + "," + (this.alpha / 255.0) + ")";
+    };
+    MSColor.prototype.toNumber = function () { return ((0xff - this.alpha) * 16777216) + (this.red * 65536) + (this.green * 256) + this.blue; };
+    MSColor.prototype.toHSB = function () {
+        var red = this.red / 255, green = this.green / 255, blue = this.blue / 255;
+        var max = Math.max(red, green, blue), min = Math.min(red, green, blue);
+        var hue = 0, saturation = 0, brightness = max;
+        if (min < max) {
+            var delta = (max - min);
+            saturation = delta / max;
+            if (red === max) {
+                hue = (green - blue) / delta;
+            }
+            else if (green === max) {
+                hue = 2 + ((blue - red) / delta);
+            }
+            else {
+                hue = 4 + ((red - green) / delta);
+            }
+            hue /= 6;
+            if (hue < 0) {
+                hue += 1;
+            }
+            if (hue > 1) {
+                hue -= 1;
+            }
+        }
+        return { h: hue, s: saturation, b: brightness };
+    };
+    MSColor.prototype.isEqualTo = function (other) {
+        return other instanceof MSColor && this.isEqualToColor(other);
+    };
+    MSColor.prototype.isEqualToColor = function (other) {
+        return this === other || (other && other.toNumber() === this.toNumber());
+    };
+    MSColor.prototype.toJSON = function () { return this.toString(); };
+    MSColor.RED = new MSColor(0xff, 0, 0);
+    MSColor.GREEN = new MSColor(0, 0xff, 0);
+    MSColor.YELLOW = new MSColor(0xff, 0xff, 0);
+    MSColor.BLUE = new MSColor(0, 0, 0xff);
+    MSColor.CYAN = new MSColor(0, 0xff, 0xff);
+    MSColor.MAGENTA = new MSColor(0xff, 0, 0xff);
+    MSColor.WHITE = new MSColor(0xff, 0xff, 0xff);
+    MSColor.BLACK = new MSColor(0, 0, 0);
+    return MSColor;
+}());
+exports.MSColor = MSColor;
+
+},{}],55:[function(require,module,exports){
+"use strict";
+var MSCouple = (function () {
+    function MSCouple(first, second) {
+        if (first === void 0) { first = null; }
+        if (second === void 0) { second = null; }
+        this.firstMember = first;
+        this.secondMember = second;
+    }
+    MSCouple.prototype.toArray = function () { return [this.firstMember, this.secondMember]; };
+    MSCouple.prototype.isEqualTo = function (other) {
+        return other instanceof MSCouple && this.isEqualToCouple(other);
+    };
+    MSCouple.prototype.isEqualToCouple = function (other) {
+        return other.firstMember === this.firstMember && other.secondMember === this.secondMember;
+    };
+    return MSCouple;
+}());
+exports.MSCouple = MSCouple;
+
+},{}],56:[function(require,module,exports){
+"use strict";
+var core_1 = require('../core');
+var DaysFrom00000229To20010101 = 730792;
+var DaysFrom00010101To20010101 = 730485;
+var SecsFrom00010101To20010101 = 63113904000;
+var SecsFrom19700101To20010101 = 978307200;
+var DaysInMonth = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+var DaysInPreviousMonth = [0, 0, 0, 0, 31, 61, 92, 122, 153, 184, 214, 245, 275, 306, 337];
+function fastPad2(v) { return v > 10 ? ('' + v) : ('0' + v); }
+var MSDate = (function () {
+    function MSDate() {
+        var n = arguments.length;
+        if (n >= 3) {
+            if (!MSDate.validDate(arguments[0], arguments[1], arguments[2])) {
+                throw "Bad MSDate() day arguments";
+            }
+            if (n !== 3 && n !== 6) {
+                throw "Impossible to initialize a new MSDate() with " + n + " arguments";
+            }
+            if (n === 6) {
+                if (!MSDate.validTime(arguments[3], arguments[4], arguments[5])) {
+                    throw "Bad MSDate() time arguments";
+                }
+                this.interval = MSDate.intervalFrom(arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5]);
+            }
+            else {
+                this.interval = MSDate.intervalFrom(arguments[0], arguments[1], arguments[2], 0, 0, 0);
+            }
+        }
+        else if (n === 2) {
+            throw "Impossible to initialize a new MSDate() with 2 arguments";
+        }
+        else {
+            var t = arguments[0]; // undefined if n === 0
+            if (typeof t === 'number')
+                this.interval = t;
+            else if (t instanceof MSDate)
+                this.interval = t.interval;
+            else {
+                var tmp = t instanceof Date ? t : new Date();
+                this.interval = MSDate.intervalFrom(tmp.getFullYear(), tmp.getMonth() + 1, tmp.getDate(), tmp.getHours(), tmp.getMinutes(), tmp.getSeconds());
+            }
+        }
+    }
+    MSDate.isLeapYear = function (y) { return (y % 4 ? false : (y % 100 ? (y > 7 ? true : false) : (y % 400 || y < 1600 ? false : true))); };
+    MSDate.validDate = function (year, month, day) {
+        if (!core_1.isInteger(day) || !core_1.isInteger(month) || !core_1.isInteger(year) || day < 1 || month < 1 || month > 12) {
+            return false;
+        }
+        if (day > DaysInMonth[month]) {
+            return (month === 2 && day === 29 && MSDate.isLeapYear(year)) ? true : false;
+        }
+        return true;
+    };
+    MSDate.validTime = function (hour, minute, second) {
+        return (core_1.isInteger(hour) && core_1.isInteger(minute) && !isNaN(second) && hour >= 0 && hour < 24 && minute >= 0 && minute < 60 && second >= 0 && second < 60);
+    };
+    MSDate.intervalFromYMD = function (year, month, day) {
+        var leaps;
+        month = 0 | month;
+        if (month < 3) {
+            month += 12;
+            year--;
+        }
+        leaps = Math.floor(year / 4) - Math.floor(year / 100) + Math.floor(year / 400);
+        return Math.floor((day + DaysInPreviousMonth[month] + 365 * year + leaps - DaysFrom00000229To20010101) * 86400);
+    };
+    MSDate.intervalFrom = function (year, month, day, hours, minutes, seconds) {
+        return MSDate.intervalFromYMD(year, month, day) + hours * 3600 + minutes * 60 + seconds;
+    };
+    MSDate.timeFromInterval = function (t) { return ((t + SecsFrom00010101To20010101) % 86400); };
+    MSDate.dayFromInterval = function (t) { return Math.floor((t - MSDate.timeFromInterval(t)) / 86400); };
+    MSDate.secondsFromInterval = function (t) { return ((t + SecsFrom00010101To20010101) % 60); };
+    MSDate.minutesFromInterval = function (t) { return core_1.div(Math.floor((t + SecsFrom00010101To20010101) % 3600), 60); };
+    MSDate.hoursFromInterval = function (t) { return core_1.div(Math.floor((t + SecsFrom00010101To20010101) % 86400), 3600); };
+    MSDate.dayOfWeekFromInterval = function (t, offset) {
+        offset = offset || 0;
+        return (MSDate.dayFromInterval(t) + DaysFrom00010101To20010101 + 7 - (offset % 7)) % 7;
+    };
+    MSDate.componentsWithInterval = function (interval) {
+        var Z = MSDate.dayFromInterval(interval) + DaysFrom00000229To20010101;
+        var gg = Z - 0.25;
+        var CENTURY = Math.floor(gg / 36524.25);
+        var CENTURY_MQUART = CENTURY - Math.floor(CENTURY / 4);
+        var ALLDAYS = gg + CENTURY_MQUART;
+        var Y = Math.floor(ALLDAYS / 365.25);
+        var Y365 = Math.floor(Y * 365.25);
+        var DAYS_IN_Y = CENTURY_MQUART + Z - Y365;
+        var MONTH_IN_Y = Math.floor((5 * DAYS_IN_Y + 456) / 153);
+        return {
+            day: Math.floor(DAYS_IN_Y - Math.floor((153 * MONTH_IN_Y - 457) / 5)),
+            hour: MSDate.hoursFromInterval(interval),
+            minute: MSDate.minutesFromInterval(interval),
+            seconds: MSDate.secondsFromInterval(interval),
+            dayOfWeek: ((Z + 2) % 7),
+            month: MONTH_IN_Y > 12 ? MONTH_IN_Y - 12 : MONTH_IN_Y,
+            year: MONTH_IN_Y > 12 ? Y + 1 : Y
+        };
+    };
+    MSDate._lastDayOfMonth = function (year, month) { return (month === 2 && MSDate.isLeapYear(year)) ? 29 : DaysInMonth[month]; }; // not protected. use carrefully
+    MSDate._yearRef = function (y, offset) {
+        var firstDayOfYear = MSDate.intervalFromYMD(y, 1, 1), d = MSDate.dayOfWeekFromInterval(firstDayOfYear, offset);
+        d = (d <= 3 ? -d : 7 - d); // Day of the first week
+        return firstDayOfYear + d * 86400;
+    };
+    MSDate.prototype.components = function () { return MSDate.componentsWithInterval(this.interval); };
+    MSDate.prototype.isEqualTo = function (other) {
+        return other instanceof MSDate && other.interval === this.interval;
+    };
+    MSDate.prototype.isLeap = function () { return MSDate.isLeapYear(this.components().year); };
+    MSDate.prototype.yearOfCommonEra = function () { return this.components().year; };
+    MSDate.prototype.monthOfYear = function () { return this.components().month; };
+    MSDate.prototype.weekOfYear = function (offset) {
+        if (offset === void 0) { offset = 0; }
+        // In order to follow ISO 8601 week begins on monday and must have at
+        // least 4 days (i.e. it must includes thursday)
+        var w;
+        var c = this.components();
+        offset %= 7;
+        var reference = MSDate._yearRef(c.year, offset);
+        if (this.interval < reference) {
+            reference = MSDate._yearRef(c.year - 1, offset);
+            w = Math.floor((this.interval - reference) / (86400 * 7)) + 1;
+        }
+        else {
+            w = Math.floor((this.interval - reference) / (86400 * 7)) + 1;
+            if (w === 53) {
+                reference += 52 * 7 * 86400;
+                c = MSDate.componentsWithInterval(reference);
+                if (c.day >= 29) {
+                    w = 1;
+                }
+            }
+        }
+        return w;
+    };
+    MSDate.prototype.dayOfYear = function () {
+        return Math.floor((this.interval - MSDate.intervalFromYMD(this.components().year, 1, 1)) / 86400) + 1;
+    };
+    MSDate.prototype.dayOfMonth = function () { return this.components().day; };
+    MSDate.prototype.lastDayOfMonth = function () { var c = this.components(); return MSDate._lastDayOfMonth(c.year, c.month); };
+    MSDate.prototype.dayOfWeek = function (offset) { return MSDate.dayOfWeekFromInterval(this.interval, offset); };
+    MSDate.prototype.hourOfDay = function () { return MSDate.hoursFromInterval(this.interval); };
+    MSDate.prototype.secondOfDay = function () { return MSDate.timeFromInterval(this.interval); };
+    MSDate.prototype.minuteOfHour = function () { return MSDate.minutesFromInterval(this.interval); };
+    MSDate.prototype.secondOfMinute = function () { return MSDate.secondsFromInterval(this.interval); };
+    MSDate.prototype.dateWithoutTime = function () { return new MSDate(this.interval - MSDate.timeFromInterval(this.interval)); };
+    MSDate.prototype.dateOfFirstDayOfYear = function () { var c = this.components(); return new MSDate(c.year, 1, 1); };
+    MSDate.prototype.dateOfLastDayOfYear = function () { var c = this.components(); return new MSDate(c.year, 12, 31); };
+    MSDate.prototype.dateOfFirstDayOfMonth = function () { var c = this.components(); return new MSDate(c.year, c.month, 1); };
+    MSDate.prototype.dateOfLastDayOfMonth = function () { var c = this.components(); return new MSDate(c.year, c.month, MSDate._lastDayOfMonth(c.year, c.month)); };
+    MSDate.prototype.secondsSinceLocal1970 = function () { return this.interval + SecsFrom19700101To20010101; };
+    MSDate.prototype.secondsSinceLocal2001 = function () { return this.interval; };
+    MSDate.prototype.toDate = function () {
+        var c = this.components();
+        return new Date(c.year, c.month - 1, c.day, c.hour, c.minute, c.seconds, 0);
+    };
+    // returns the ISO 8601 representation without any timezone
+    MSDate.prototype.toISOString = function () {
+        var c = this.components();
+        return c.year + '-' +
+            fastPad2(c.month) + '-' +
+            fastPad2(c.day) + 'T' +
+            fastPad2(c.hour) + ':' +
+            fastPad2(c.minute) + ':' +
+            fastPad2(c.seconds);
+    };
+    MSDate.prototype.toString = function () {
+        return this.toISOString();
+    };
+    MSDate.prototype.toJSON = function () {
+        return this.toISOString();
+    };
+    MSDate.DaysFrom00000229To20010101 = DaysFrom00000229To20010101;
+    MSDate.DaysFrom00010101To20010101 = DaysFrom00010101To20010101;
+    MSDate.SecsFrom00010101To20010101 = SecsFrom00010101To20010101;
+    MSDate.SecsFrom19700101To20010101 = SecsFrom19700101To20010101;
+    return MSDate;
+}());
+exports.MSDate = MSDate;
+
+},{"../core":41}],57:[function(require,module,exports){
+"use strict";
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+var msbuffer_1 = require('./msbuffer');
+function safeNaturalValue(value) {
+    return value | 0;
+}
+var MSNaturalArray = (function (_super) {
+    __extends(MSNaturalArray, _super);
+    function MSNaturalArray() {
+        _super.call(this);
+        msbuffer_1.push(this, 0, arguments, true, safeNaturalValue);
+    }
+    MSNaturalArray.prototype.unshift = function () {
+        msbuffer_1.unshift(this, 0, arguments, false, safeNaturalValue);
+        return this.length;
+    };
+    MSNaturalArray.prototype.push = function () {
+        msbuffer_1.push(this, 0, arguments, false, safeNaturalValue);
+        return this.length;
+    };
+    MSNaturalArray.prototype.concat = function () {
+        var ret = new MSNaturalArray();
+        Array.prototype.push.apply(ret, this);
+        msbuffer_1.push(ret, 0, arguments, true, safeNaturalValue);
+        return ret;
+    };
+    MSNaturalArray.prototype.slice = function (start, end) {
+        return new MSNaturalArray(Array.prototype.slice.apply(this, arguments));
+    };
+    MSNaturalArray.prototype.splice = function (start, deleteCount) {
+        var items = [];
+        for (var _i = 2; _i < arguments.length; _i++) {
+            items[_i - 2] = arguments[_i];
+        }
+        return new MSNaturalArray(Array.prototype.splice.apply(this, arguments));
+    };
+    MSNaturalArray.prototype.toJSON = function () {
+        return Array.from(this);
+    };
+    MSNaturalArray.prototype.isEqualTo = function (other) {
+        return other instanceof MSNaturalArray && this.isEqualToArray(other);
+    };
+    MSNaturalArray.prototype.isEqualToArray = function (other) {
+        if (this === other)
+            return true;
+        if (!other || other.length !== this.length)
+            return false;
+        for (var i = 0, len = this.length; i < len; i++) {
+            if (this[i] !== other[i])
+                return false;
+        }
+        return true;
+    };
+    return MSNaturalArray;
+}(Array));
+exports.MSNaturalArray = MSNaturalArray;
+
+},{"./msbuffer":53}]},{},[50]);

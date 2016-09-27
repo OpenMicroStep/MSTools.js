@@ -5,11 +5,11 @@
   "main": "dist/mstools.umd.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "concurrently 'tsc' 'npm run build:umd:compress'",
-    "build:umd": "browserify src/index.ts -p [ tsify ] -s MSTools -o dist/mstools.umd.js",
-    "build:umd:debug": "browserify src/index.ts -p [ tsify ] -s MSTools -o dist/mstools.umd.js -d",
+    "build": "tsc && tsc -p tests && concurrently 'npm run build:umd' 'npm run build:umd:compress'",
+    "build:umd": "browserify null/index.js -s MSTools -o dist/mstools.umd.js",
+    "build:umd:debug": "browserify null/index.js -s MSTools -o dist/mstools.umd.js -d",
     "build:umd:compress": "npm run build:umd && uglifyjs dist/mstools.umd.js --mangle --compress --stats -o dist/mstools.umd.min.js",
-    "test:umd": "browserify tests/index.ts -p [ tsify -p tests ] -o dist/mstools-tests.umd.js",
+    "test:umd": "browserify null/tests/index.js -o dist/mstools-tests.umd.js",
     "test:node": "mocha --colors tests/load.umd.js dist/mstools-tests.umd.js",
     "test:node-min": "mocha --colors tests/load.umd.min.js dist/mstools-tests.umd.js",
     "test": "npm run build && npm run test:umd && concurrently 'npm run test:node' 'npm run test:node-min'"
@@ -22,11 +22,10 @@
     "chai": "^3.5.0",
     "concurrently": "^2.2.0",
     "mocha": "^3.0.2",
-    "tsify": "1.0.3",
     "typescript": "^2.0.0",
     "uglify": "^0.1.5"
   },
   "dependencies": {
-    "typescript": "^2.0.2"
+    "typescript": "^2.0.3"
   }
 }

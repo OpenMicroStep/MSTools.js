@@ -1,5 +1,5 @@
 import {expect} from 'chai';
-import * as MSTools from './mstools';
+import * as MSTools from '../';
 
 describe("Core", function() {
 	it("crc32", function() {

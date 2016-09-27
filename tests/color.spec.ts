@@ -1,5 +1,5 @@
 import {expect} from 'chai';
-import {MSColor} from './mstools';
+import {MSColor} from '../';
 
 describe("MSColor", function() {
 	it("constructor", function() {

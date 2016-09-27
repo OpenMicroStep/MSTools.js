@@ -1,5 +1,5 @@
 import {expect} from 'chai';
-import {MSTE, MSBuffer, MSNaturalArray, MSDate, MSColor, MSCouple} from './mstools';
+import {MSTE, MSBuffer, MSNaturalArray, MSDate, MSColor, MSCouple} from '../';
 
 const data_graph = [{
     name: "Durand ¥-$-€",

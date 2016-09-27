@@ -1,5 +1,5 @@
 import {expect} from 'chai';
-import {MSNaturalArray} from './mstools';
+import {MSNaturalArray} from '../';
 
 describe("MSNaturalArray", function() {
 
