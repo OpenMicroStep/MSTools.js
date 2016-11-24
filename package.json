@@ -1,6 +1,5 @@
 {
-  "name": "mstools",
-  "private": true,
+  "name": "@microstep/mstools",
   "version": "1.0.0",
   "main": "dist/mstools.umd.js",
   "types": "dist/index.d.ts",
@@ -14,6 +13,9 @@
     "test:node-min": "mocha --colors tests/load.umd.min.js dist/mstools-tests.umd.js",
     "test": "npm run build && npm run test:umd && concurrently 'npm run test:node' 'npm run test:node-min'"
   },
+  "files": [
+    "dist/"
+  ],
   "devDependencies": {
     "@types/chai": "^3.4.30",
     "@types/expect": "^1.13.29",
@@ -22,10 +24,7 @@
     "chai": "^3.5.0",
     "concurrently": "^2.2.0",
     "mocha": "^3.0.2",
-    "typescript": "^2.0.0",
+    "typescript": "^2.0.10",
     "uglify": "^0.1.5"
-  },
-  "dependencies": {
-    "typescript": "^2.0.3"
   }
 }
