@@ -29,10 +29,23 @@ function extendNativeObject(object: any, name: string, value: any) {
 }
 
 extendNativeObject(Object.prototype, 'toMSTE', function toMSTE(this: Object, options?: EncoderOptions) {
-        return stringify(this, options);
+  return stringify(this, options);
 });
 extendNativeObject(Object.prototype, "encodeToMSTE", function encodeObjectToMSTE(this: Object, encoder: Encoder) {
   encoder.encodeDictionary(this);
+});
+extendNativeObject(Map.prototype, "encodeToMSTE", function encodeObjectToMSTE<K, T>(this: Map<K, T>, encoder: Encoder) {
+  var d = {};
+  this.forEach((v, k) => {
+    if (typeof k === "string")
+      d[<string>k] = v;
+    else
+      encoder.diagnostic({ type: "map_non_string_key", msg: "cannot encode a non string Map key" });
+  });
+  encoder.encodeDictionary(d);
+});
+extendNativeObject(Set.prototype, "encodeToMSTE", function encodeObjectToMSTE<T>(this: Set<T>, encoder: Encoder) {
+  encoder.encodeArray(Array.from(this));
 });
 extendNativeObject(Array.prototype, "encodeToMSTE", function encodeArrayToMSTE<T>(this: Array<T>, encoder: Encoder) {
   encoder.encodeArray(this);
@@ -71,6 +84,8 @@ export interface EngineEncoderConstructor {
 }
 
 export interface Encoder {
+    diagnostic(diag: { type: string, msg: string })
+    diagnostics: { type: string, msg: string }[]
     encodeNil()
     encodeBoolean(value: boolean)
     encodeInteger(value: number)

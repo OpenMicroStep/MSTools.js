@@ -162,7 +162,7 @@ describe("MSTE", function() {
     });
 
     it("decodes OBJC demo mste chain with local classes", function () {
-      class Person1 { }
+      class Person1 implements MSTE.Decodable { initWithMSTEDictionary(d) { Object.assign(this, d); } }
       class Person2 { }
       var r = MSTE.parse(JMChain, {
         classes:{

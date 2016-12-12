@@ -5,6 +5,10 @@ export type DecoderOptions = {
     crc?: boolean
 }
 
+export interface MSTEDecodable extends Object {
+    initWithMSTEDictionary(dictionary: { [s: string]: any }): void;
+}
+
 export class Decoder {
     checkCRC: boolean ;
     keys: string[];
@@ -108,7 +112,14 @@ export class Decoder {
             let clsname = this.classes[clsidx];
             let cls = this.correspondances[clsname];
             let obj = this.pushRef(cls ? new cls() : {});
-            this.engine.parse_dictionary_into(this, obj);
+            if (typeof obj["initWithMSTEDictionary"] === "function") {
+                let d = {};
+                this.engine.parse_dictionary_into(this, d);
+                (<MSTEDecodable>obj).initWithMSTEDictionary(d);
+            }
+            else {
+                this.engine.parse_dictionary_into(this, obj);
+            }
             return obj;
         }
         let parser = this.engine.parsers[token];

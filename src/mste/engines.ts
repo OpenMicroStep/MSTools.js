@@ -159,12 +159,18 @@ abstract class EncoderV10X implements Encoder {
     keys: Map<string, number>;
     classes: Map<string, number>;
     engine: Engine;
+    diagnostics: { type: string, msg: string }[];
 
     constructor(options?: EncoderOptions) {
         this.tokens = [this.engine.version, 0, "CRC00000000", 0, 0];
         this.references = new Map();
         this.keys = new Map();
         this.classes = new Map();
+        this.diagnostics = [];
+    }
+
+    diagnostic(diag: { type: string, msg: string }) {
+        this.diagnostics.push(diag);
     }
 
     encodeRoot(object) {
@@ -190,6 +196,7 @@ abstract class EncoderV10X implements Encoder {
             case 'number': isInteger(object) ? this.encodeInteger(object) : this.encodeReal(object); break;
             case 'string': this.encodeString(object); break;
             case 'boolean': this.encodeBoolean(object); break;
+            case 'undefined': this.diagnostic({ type: "undefined", msg: "cannot encode undefined value" }); this.encodeNil(); break;
             default: throw new Error('unsupported typeof object');
         }
     }
@@ -332,6 +339,16 @@ class EncoderV0101 extends EncoderV10X {
     encodeCouple<T1, T2>(value: MSCouple<T1, T2>) { this.encodeCoupleV10X(value, 22); }
 }
 
+function createTokenizer(encoderClass: typeof EncoderV0101) {
+    return function tokenize(object: any, options?: EncoderOptions) {
+        let encoder = new encoderClass(options);
+        encoder.encodeRoot(object);
+        if (encoder.diagnostics.length)
+            throw new Error(encoder.diagnostics.map(d => d.msg).join(', '));
+        return encoder.tokens;
+    }
+}
+
 EncoderV0101.prototype.engine = {
     version:"MSTE0101",
     versionCode: 0x0101,
@@ -366,11 +383,7 @@ EncoderV0101.prototype.engine = {
         26: parse_emptyString,
         27: parse_ref
     },
-    tokenize: function tokenizeV0101(object: any, options?: EncoderOptions) {
-        let encoder = new EncoderV0101(options);
-        encoder.encodeRoot(object);
-        return encoder.tokens;
-    },
+    tokenize: createTokenizer(EncoderV0101),
     classIndex:function(code) { return ((code % 2 === 0 ? code - 50 : code - 51) / 2) | 0; }
 };
 
@@ -431,11 +444,7 @@ EncoderV0102.prototype.engine = {
         31: parse_array_ref,
         32: parse_couple_ref
     },
-    tokenize: function tokenizeV0102(object: any, options?: EncoderOptions) {
-        let encoder = new EncoderV0102(options);
-        encoder.encodeRoot(object);
-        return encoder.tokens;
-    },
+    tokenize: createTokenizer(EncoderV0102),
     classIndex:function(code) { return code - 50; }
 };
 
