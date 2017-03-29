@@ -1,6 +1,6 @@
 {
-  "name": "@microstep/mstools",
-  "version": "1.0.1",
+  "name": "@openmicrostep/mstools",
+  "version": "1.0.3",
   "main": "dist/mstools.umd.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -17,14 +17,14 @@
     "dist/"
   ],
   "devDependencies": {
-    "@types/chai": "^3.4.30",
-    "@types/expect": "^1.13.29",
-    "@types/mocha": "^2.2.29",
-    "browserify": "^13.1.0",
+    "@types/chai": "^3.4.35",
+    "@types/expect": "^1.20.1",
+    "@types/mocha": "^2.2.40",
+    "browserify": "^14.1.0",
     "chai": "^3.5.0",
-    "concurrently": "^2.2.0",
-    "mocha": "^3.0.2",
-    "typescript": "^2.0.10",
-    "uglify": "^0.1.5"
+    "concurrently": "^3.4.0",
+    "mocha": "^3.2.0",
+    "typescript": "^2.2.2",
+    "uglify-js": "^2.8.18"
   }
 }
