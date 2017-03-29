@@ -119,7 +119,7 @@ export class MSColor
             saturation = hue.s;
             hue = hue.h;
         }
-        if (brightness !== 0) {
+        if (typeof brightness === "number" && typeof saturation === "number") {
             var i = (Math.max(0, Math.floor(<number>hue * 6))) % 7,
                 f = (<number>hue * 6) - i,
                 p = brightness * (1 - saturation),
