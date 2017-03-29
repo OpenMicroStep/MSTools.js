@@ -7,6 +7,4 @@ node_js:
 
 script:
   - npm run build
-  - rm -r node_modules/
-  - npm install -q --production
   - npm test
