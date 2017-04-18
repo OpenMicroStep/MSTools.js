@@ -1,10 +1,10 @@
 {
   "name": "@openmicrostep/mstools",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "main": "dist/mstools.umd.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc && tsc -p tests && concurrently 'npm run build:umd' 'npm run build:umd:compress' 'npm run build:umd:tests'",
+    "build": "tsc -p tests && tsc && concurrently 'npm run build:umd' 'npm run build:umd:compress' 'npm run build:umd:tests'",
     "build:umd": "browserify null/index.js -s MSTools -o dist/mstools.umd.js",
     "build:umd:debug": "browserify null/index.js -s MSTools -o dist/mstools.umd.js -d",
     "build:umd:compress": "npm run build:umd && uglifyjs dist/mstools.umd.js --mangle --compress --stats -o dist/mstools.umd.min.js",
@@ -20,6 +20,8 @@
   "files": [
     "dist/"
   ],
+  "author": "OpenMicroStep",
+  "license": "MIT",
   "devDependencies": {
     "@types/chai": "^3.4.35",
     "@types/expect": "^1.20.1",
