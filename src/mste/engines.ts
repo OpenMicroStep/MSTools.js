@@ -230,10 +230,9 @@ abstract class EncoderV10X implements Encoder {
     }
 
     encodeStringV10X(value: string, emptyToken: number, token: number) {
-        if (!this.shouldPushObject(value)) return;
         if (value.length === 0)
             this.pushToken(emptyToken);
-        else {
+        else if (this.shouldPushObject(value)) {
             this.pushToken(token);
             this.pushToken(value);
         }
