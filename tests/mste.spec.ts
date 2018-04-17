@@ -128,6 +128,7 @@ describe("MSTE", function() {
     it('true',         function() { test_mste("[\"MSTE0102\",6,\"CRC9B5A0F31\",0,0,1]", true); });
     it('false',        function() { test_mste("[\"MSTE0102\",6,\"CRCB0775CF2\",0,0,2]", false); });
     it('empty string', function() { test_mste("[\"MSTE0102\",6,\"CRCA96C6DB3\",0,0,3]", ""); });
+    it('empty str x2', function() { test_mste("[\"MSTE0102\",9,\"CRCF822B416\",0,0,31,2,3,3]", ["", ""]); });
     it('empty data',   function() { test_mste("[\"MSTE0102\",6,\"CRCE62DFB74\",0,0,4]", new MSBuffer()); });
     it('number',       function() { test_mste("[\"MSTE0102\",7,\"CRCBF421375\",0,0,20,12.34]", 12.34); });
     it('string 1',     function() { test_mste("[\"MSTE0102\",7,\"CRC09065CB6\",0,0,21,\"My beautiful string \\u00E9\\u00E8\"]", "My beautiful string éè"); });
