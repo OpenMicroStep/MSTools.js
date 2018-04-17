@@ -1,5 +1,5 @@
 import {expect} from 'chai';
-import {MSColor} from '../';
+import {MSColor} from '../src/index';
 
 describe("MSColor", function() {
 	it("constructor", function() {

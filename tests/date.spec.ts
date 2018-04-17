@@ -1,5 +1,5 @@
 import {expect} from 'chai';
-import {MSDate} from '../';
+import {MSDate} from '../src/index';
 
 describe("MSDate", function() {
 

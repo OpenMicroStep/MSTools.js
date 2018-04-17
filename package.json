@@ -4,14 +4,14 @@
   "main": "dist/mstools.umd.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc -p tests && tsc && concurrently 'npm run build:umd' 'npm run build:umd:compress' 'npm run build:umd:tests'",
+    "build": "tsc -p tests && tsc && concurrently \"npm run build:umd\" \"npm run build:umd:compress\" \"npm run build:umd:tests\"",
     "build:umd": "browserify null/index.js -s MSTools -o dist/mstools.umd.js",
     "build:umd:debug": "browserify null/index.js -s MSTools -o dist/mstools.umd.js -d",
     "build:umd:compress": "npm run build:umd && uglifyjs dist/mstools.umd.js --mangle --compress --stats -o dist/mstools.umd.min.js",
     "build:umd:tests": "browserify null/tests/index.js -o dist/mstools-tests.umd.js",
     "test:node": "mocha --colors tests/load.umd.js dist/mstools-tests.umd.js",
     "test:node-min": "mocha --colors tests/load.umd.min.js dist/mstools-tests.umd.js",
-    "test": "concurrently 'npm run test:node' 'npm run test:node-min'"
+    "test": "concurrently \"npm run test:node\" \"npm run test:node-min\""
   },
   "repository": {
     "type": "git",

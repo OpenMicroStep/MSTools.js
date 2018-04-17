@@ -1,5 +1,5 @@
 import {expect} from 'chai';
-import {MSBuffer} from '../';
+import {MSBuffer} from '../src/index';
 
 describe("MSBuffer", function() {
 	it("constructor, concat, slice, splice", function() {
